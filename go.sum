@@ -214,6 +214,8 @@ github.com/silk-us/silk-sdp-go-sdk v0.1.5 h1:M4Guamuqfpk7dvH7ugElUSoE3yZjCgidnws
 github.com/silk-us/silk-sdp-go-sdk v0.1.5/go.mod h1:9zgQmOCTocQgEs3iRbPnsFQ9eXnsx64DLzwUMdpJucA=
 github.com/silk-us/silk-sdp-go-sdk v0.1.6 h1:VV03WvkdRZ0wHSTqvSSk5zIvmqRecA1CazsxY3+KRFg=
 github.com/silk-us/silk-sdp-go-sdk v0.1.6/go.mod h1:9zgQmOCTocQgEs3iRbPnsFQ9eXnsx64DLzwUMdpJucA=
+github.com/silk-us/silk-sdp-go-sdk v0.1.7 h1:bY4X7yIYGhrSb9p8S09Q8YxgIZK0yVLKVItJz6dzkN8=
+github.com/silk-us/silk-sdp-go-sdk v0.1.7/go.mod h1:9zgQmOCTocQgEs3iRbPnsFQ9eXnsx64DLzwUMdpJucA=
 github.com/spf13/pflag v1.0.2/go.mod h1:DYY7MBk1bdzusC3SYhjObp+wFpr4gzcvqqNjLnInEg4=
 github.com/stretchr/objx v0.1.0/go.mod h1:HFkY916IF+rwdDfMAkV7OtwuqBVzrE8GR6GFx+wExME=
 github.com/stretchr/testify v1.2.2/go.mod h1:a8OnRcib4nhh0OaRAV+Yts87kKdq0PP7pXfy6kDkUVs=
