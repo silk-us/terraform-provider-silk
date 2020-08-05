@@ -49,3 +49,4 @@ terraform.rc
 # Dependency directories (remove the comment below to include it)
 vendor/
 terraform-provider-silk
+main.tf
