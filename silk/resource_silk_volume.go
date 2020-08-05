@@ -67,7 +67,7 @@ func resourceSilkVolume() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "An optional list of Hosts the volume is mapped to.",
+				Description: "An optional list of Hosts the Volume is mapped to.",
 			},
 			"host_group_mapping": {
 				Type:     schema.TypeList,
@@ -76,7 +76,7 @@ func resourceSilkVolume() *schema.Resource {
 				Elem: &schema.Schema{
 					Type: schema.TypeString,
 				},
-				Description: "An optional list of Host Groups the volume is mapped to.",
+				Description: "An optional list of Host Groups the Volume is mapped to.",
 			},
 			"timeout": {
 				Type:        schema.TypeInt,

@@ -3,6 +3,8 @@ package silk
 import (
 	"context"
 	"fmt"
+	"reflect"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -47,6 +49,24 @@ func resourceSilkVolumeGroup() *schema.Resource {
 				Default:     "default_vg_capacity_policy",
 				Description: "The capacity threshold policy profile for the Volume Group.",
 			},
+			"host_mapping": {
+				Type:     schema.TypeList,
+				Required: false,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "An optional list of Hosts the Volume Group is mapped to.",
+			},
+			"host_group_mapping": {
+				Type:     schema.TypeList,
+				Required: false,
+				Optional: true,
+				Elem: &schema.Schema{
+					Type: schema.TypeString,
+				},
+				Description: "An optional list of Host Groups the Volume Group is mapped to.",
+			},
 			"timeout": {
 				Type:        schema.TypeInt,
 				Optional:    true,
@@ -66,6 +86,8 @@ func resourceSilkVolumeGroupCreate(ctx context.Context, d *schema.ResourceData, 
 	enableDeDuplication := d.Get("enable_deduplication").(bool)
 	description := d.Get("description").(string)
 	capacityPolicy := d.Get("capacity_policy").(string)
+	hostMapping := d.Get("host_mapping").([]interface{})
+	hostGroupMapping := d.Get("host_group_mapping").([]interface{})
 	timeout := d.Get("timeout").(int)
 
 	silk := m.(*silksdp.Credentials)
@@ -73,6 +95,24 @@ func resourceSilkVolumeGroupCreate(ctx context.Context, d *schema.ResourceData, 
 	volumeGroup, err := silk.CreateVolumeGroup(name, quotaInGb, enableDeDuplication, description, capacityPolicy, timeout)
 	if err != nil {
 		return diag.FromErr(err)
+	}
+
+	if len(hostMapping) != 0 {
+		for _, h := range hostMapping {
+			_, err := silk.CreateHostVolumeGroupMapping(h.(interface{}).(string), name)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
+
+	if len(hostGroupMapping) != 0 {
+		for _, h := range hostGroupMapping {
+			_, err := silk.CreateHostGroupVolumeGroupMapping(h.(interface{}).(string), name)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
 
 	// Set the resource ID
@@ -122,6 +162,42 @@ func resourceSilkVolumeGroupRead(ctx context.Context, d *schema.ResourceData, m 
 				}
 			}
 
+			if len(d.Get("host_mapping").([]interface{})) != 0 {
+
+				// Get the current hosts mapped to the volume then set the TF host_mapping value with
+				// those responses
+				hostsMappedToVolumeGroup, err := silk.GetVolumeGroupHostMappings(d.Get("name").(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Sort the new slice to prevent any TF comparison issues
+				sort.Slice(hostsMappedToVolumeGroup, func(i, j int) bool {
+					return hostsMappedToVolumeGroup[i] < hostsMappedToVolumeGroup[j]
+				})
+
+				d.Set("host_mapping", hostsMappedToVolumeGroup)
+
+			}
+
+			if len(d.Get("host_group_mapping").([]interface{})) != 0 {
+
+				// Get the current hosts mapped to the volume then set the TF host_mapping value with
+				// those responses
+				hostGroupsMappedToVolumeGroup, err := silk.GetVolumeGroupHostGroupMappings(d.Get("name").(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+				// Sort the new slice to prevent any TF comparison issues
+				sort.Slice(hostGroupsMappedToVolumeGroup, func(i, j int) bool {
+					return hostGroupsMappedToVolumeGroup[i] < hostGroupsMappedToVolumeGroup[j]
+				})
+
+				d.Set("host_group_mapping", hostGroupsMappedToVolumeGroup)
+
+			}
+
 			d.Set("name", volumeGroup.Name)
 			d.Set("quota_in_gb", volumeGroup.Quota.(float64)/1024/1024)
 			d.Set("enable_deduplication", volumeGroup.IsDedup)
@@ -155,6 +231,131 @@ func resourceSilkVolumeGroupUpdate(ctx context.Context, d *schema.ResourceData, 
 		volumeGroupName = currentVolumeGroupName.(string)
 	} else {
 		volumeGroupName = d.Get("name").(string)
+	}
+
+	hostMappingToRemove := []string{}
+	hostMappingToAdd := []string{}
+	if d.HasChange("host_mapping") {
+
+		// Get the current (c) and new (n) pwwn hosts
+		c, n := d.GetChange("host_mapping")
+		// Use reflection to convert c and n into values that can be ranged through
+		// without crashing Terraform
+		cReflect := reflect.ValueOf(c)
+		nReflect := reflect.ValueOf(n)
+		// Create new []string{}, that holds the values of c, n, that can be ranged
+		// through
+		current := []string{}
+		new := []string{}
+		// Loop through cReflect and append values to current
+		for i := 0; i < cReflect.Len(); i++ {
+			current = append(current, cReflect.Index(i).Interface().(string))
+		}
+		// Loop through nReflect and append values to new
+		for i := 0; i < nReflect.Len(); i++ {
+			new = append(new, nReflect.Index(i).Interface().(string))
+		}
+
+		// Mapping Hosts
+		if len(current) < len(new) {
+			// Find all pwwns that have been added to the pwwn slice
+			for _, h := range new {
+				_, found := find(current, h)
+				if !found {
+					hostMappingToAdd = append(hostMappingToAdd, h)
+				}
+			}
+
+			// Add each Host to the Volume
+			for _, h := range hostMappingToAdd {
+				_, err := silk.CreateHostVolumeGroupMapping(h, d.Get("name").(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+
+		} else {
+
+			// Find all Hosts that have been removed from the host_mapping slice
+			for _, h := range current {
+				_, found := find(new, h)
+				if !found {
+					hostMappingToRemove = append(hostMappingToRemove, h)
+				}
+			}
+
+			// Remove each Host from the Volume
+			for _, h := range hostMappingToRemove {
+				_, err := silk.DeleteHostVolumeGroupMapping(h, d.Get("name").(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+
+	}
+
+	hostGroupMappingToRemove := []string{}
+	hostGroupMappingToAdd := []string{}
+	if d.HasChange("host_group_mapping") {
+
+		// Get the current (c) and new (n) pwwn hosts
+		c, n := d.GetChange("host_group_mapping")
+		// Use reflection to convert c and n into values that can be ranged through
+		// without crashing Terraform
+		cReflect := reflect.ValueOf(c)
+		nReflect := reflect.ValueOf(n)
+		// Create new []string{}, that holds the values of c, n, that can be ranged
+		// through
+		current := []string{}
+		new := []string{}
+		// Loop through cReflect and append values to current
+		for i := 0; i < cReflect.Len(); i++ {
+			current = append(current, cReflect.Index(i).Interface().(string))
+		}
+		// Loop through nReflect and append values to new
+		for i := 0; i < nReflect.Len(); i++ {
+			new = append(new, nReflect.Index(i).Interface().(string))
+		}
+
+		// Mapping Host Group
+		if len(current) < len(new) {
+			// Find all Host Groups that have been added to the host_group_mapping slice
+			for _, hg := range new {
+				_, found := find(current, hg)
+				if !found {
+					hostGroupMappingToAdd = append(hostGroupMappingToAdd, hg)
+				}
+			}
+
+			// Map each Host Group to the Volume
+			for _, hg := range hostGroupMappingToAdd {
+				_, err := silk.CreateHostGroupVolumeGroupMapping(hg, d.Get("name").(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+
+		} else {
+
+			// Find all Host Group that have been removed from the host_group_mapping slice
+			for _, hg := range current {
+				_, found := find(new, hg)
+				if !found {
+					hostGroupMappingToRemove = append(hostGroupMappingToRemove, hg)
+				}
+			}
+
+			// Remove each Host Group mapping from the Volume
+			for _, hg := range hostGroupMappingToRemove {
+				_, err := silk.DeleteHostGroupVolumeGroupMapping(hg, d.Get("name").(string))
+				if err != nil {
+					return diag.FromErr(err)
+				}
+
+			}
+		}
+
 	}
 
 	if d.HasChange("quota_in_gb") {
