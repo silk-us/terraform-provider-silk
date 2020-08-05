@@ -29,6 +29,8 @@ resource "silk_volume" "Silk-Volume" {
   vmware = true
   description = "Created through TF"
   read_only = false
+  host_mapping = ["ExampleHostName]
+  host_group_mapping = ["ExampleHostGroupName]
   allow_destroy = true
 }
 
@@ -42,13 +44,14 @@ resource "silk_volume_group" "Silk-Volume-Group" {
 resource "silk_host" "Silk-Host" {
   name = "TerraformHost"
   host_type = "Linux"
-  pwwn = ["20:36:44:78:66:77:ab:10", "30:36:44:78:66:77:ab:10", "50:36:44:78:66:77:ab:10", "10:96:44:78:66:77:ab:10"]
+  pwwn = ["20:36:44:78:66:77:ab:10", "30:36:44:78:66:77:ab:10", "50:36:44:78:66:77:ab:10"]
 }
 
 resource "silk_host_group" "Silk-Host-Group" {
   name = "TerraformHostGroup"
   description = "Updated through Terraform"
   allow_different_host_types = true
+  host_mapping = ["ExampleHostName", "ExampleHostName"]
 
 }
 ```
