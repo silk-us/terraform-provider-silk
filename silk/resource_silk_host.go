@@ -256,6 +256,68 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 
 	}
 
+	iqnToRemove := []string{}
+	iqnToAdd := []string{}
+	if d.HasChange("iqn") {
+
+		// Get the current (c) and new (n) iqn hosts
+		c, n := d.GetChange("iqn")
+		// Use reflection to convert c and n into values that can be ranged through
+		// without crashing Terraform
+		cReflect := reflect.ValueOf(c)
+		nReflect := reflect.ValueOf(n)
+		// Create new []string{}, that holds the values of c, n, that can be ranged
+		// through
+		current := []string{}
+		new := []string{}
+		// Loop through cReflect and append values to current
+		for i := 0; i < cReflect.Len(); i++ {
+			current = append(current, cReflect.Index(i).Interface().(string))
+		}
+		// Loop through nReflect and append values to new
+		for i := 0; i < nReflect.Len(); i++ {
+			new = append(new, nReflect.Index(i).Interface().(string))
+		}
+
+		// Adding IQNs
+		if len(current) < len(new) {
+			// Find all IQNs that have been added to the IQN slice
+			for _, i := range new {
+				_, found := find(current, i)
+				if !found {
+					iqnToAdd = append(iqnToAdd, i)
+				}
+			}
+
+			// Add each IQN to the Host
+			for _, i := range iqnToAdd {
+				_, err := silk.CreateHostIQN(d.Get("name").(string), i)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+
+		} else {
+
+			// Find all IQNs that have been removed from the IQNs slice
+			for _, i := range current {
+				_, found := find(new, i)
+				if !found {
+					iqnToRemove = append(iqnToRemove, i)
+				}
+			}
+
+			// Remove each IQN from the Host
+			for _, i := range iqnToRemove {
+				_, err := silk.DeleteHostIndividualIQN(d.Get("name").(string), i)
+				if err != nil {
+					return diag.FromErr(err)
+				}
+			}
+		}
+
+	}
+
 	if d.HasChange("host_type") {
 		config["type"] = d.Get("host_type").(string)
 	}
