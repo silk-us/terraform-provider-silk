@@ -3,7 +3,6 @@ package silk
 import (
 	"context"
 	"fmt"
-	"log"
 	"reflect"
 	"sort"
 	"strconv"
@@ -62,8 +61,6 @@ func resourceSilkHost() *schema.Resource {
 }
 
 func resourceSilkHostCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
-
-	log.Printf("[INFO] Silk Host Create Function")
 
 	// Read in the resource schema arguments for easier assignment
 	name := d.Get("name").(string)
@@ -218,13 +215,6 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 		for i := 0; i < nReflect.Len(); i++ {
 			new = append(new, nReflect.Index(i).Interface().(string))
 		}
-
-		// Sort the new slice to prevent any TF comparison issues
-		// The sort in the read function should prevent issues so
-		// this is just an extra layer of protection.
-		sort.Slice(new, func(i, j int) bool {
-			return new[i] < new[j]
-		})
 
 		// Adding PWWNs
 		if len(current) < len(new) {
