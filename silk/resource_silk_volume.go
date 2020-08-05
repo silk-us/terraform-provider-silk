@@ -251,7 +251,7 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	hostMappingToAdd := []string{}
 	if d.HasChange("host_mapping") {
 
-		// Get the current (c) and new (n) pwwn hosts
+		// Get the current (c) and new (n) host mappings
 		c, n := d.GetChange("host_mapping")
 		// Use reflection to convert c and n into values that can be ranged through
 		// without crashing Terraform
@@ -272,7 +272,7 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 
 		// Mapping Hosts
 		if len(current) < len(new) {
-			// Find all pwwns that have been added to the pwwn slice
+			// Find all hosts that have been added to the host slice
 			for _, h := range new {
 				_, found := find(current, h)
 				if !found {
@@ -313,7 +313,7 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	hostGroupMappingToAdd := []string{}
 	if d.HasChange("host_group_mapping") {
 
-		// Get the current (c) and new (n) pwwn hosts
+		// Get the current (c) and new (n) host group mappings
 		c, n := d.GetChange("host_group_mapping")
 		// Use reflection to convert c and n into values that can be ranged through
 		// without crashing Terraform
