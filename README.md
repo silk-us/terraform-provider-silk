@@ -29,8 +29,8 @@ resource "silk_volume" "Silk-Volume" {
   vmware = true
   description = "Created through TF"
   read_only = false
-  host_mapping = ["ExampleHostName]
-  host_group_mapping = ["ExampleHostGroupName]
+  host_mapping = ["ExampleHostName"]
+  host_group_mapping = ["ExampleHostGroupName"]
   allow_destroy = true
 }
 
