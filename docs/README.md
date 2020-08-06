@@ -1,6 +1,6 @@
 # Silk Provider
 
-The Silk Provider exposes resources to interfact with a Silk server.
+The Silk Provider exposes resources to interact with a Silk server.
 
 ## Example Usage
 
