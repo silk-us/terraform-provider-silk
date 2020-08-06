@@ -23,13 +23,13 @@ func resourceSilkVolumeGroup() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
-				Description: "The name of the Volume Group..",
+				Description: "The name of the Volume Group.",
 			},
 			"quota_in_gb": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     0,
-				Description: "The size quota, in GB, of the Volume Group.",
+				Description: "The size quota, in GB, of the Volume Group. The default option of 0 corresponds to an Unlimited Quota.",
 			},
 			"enable_deduplication": {
 				Type:        schema.TypeBool,
@@ -40,7 +40,7 @@ func resourceSilkVolumeGroup() *schema.Resource {
 			"description": {
 				Required:    true,
 				Type:        schema.TypeString,
-				Description: "A description of the Volume Group..",
+				Description: "A description of the Volume Group.",
 			},
 			"capacity_policy": {
 				Type:        schema.TypeString,
