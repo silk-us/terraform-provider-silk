@@ -2,6 +2,7 @@ package silk
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/hashicorp/terraform-plugin-sdk/v2/helper/resource"
@@ -9,14 +10,14 @@ import (
 	"github.com/silk-us/silk-sdp-go-sdk/silksdp"
 )
 
-// Required Silk Centric Variables
-var volumeName = "TerraformTestAccVolume"
-var volumeGroupName = "TerraformTestAccVolumeGroup"
-var hostNames = []string{"TerraformTestAccVolumeHost01", "TerraformTestAccVolumeHost02"}
-var hostGroupNames = []string{"TerraformTestAccVolumeHG01", "TerraformTestAccVolumeHG02"}
-
 // TestAccSilkVolume is the main function that is executed during the test process.
 func TestAccSilkVolume(t *testing.T) {
+
+	// Required Silk Centric Variables.
+	var volumeName = "TerraformTestAccVolume"
+	var volumeGroupName = "TerraformTestAccVolumeVG"
+	var hostNames = []string{"TerraformTestAccVolumeHost01", "TerraformTestAccVolumeHost02"}
+	var hostGroupNames = []string{"TerraformTestAccVolumeHG01", "TerraformTestAccVolumeHG02"}
 
 	resource.Test(t, resource.TestCase{
 		PreCheck: func() {
@@ -213,8 +214,15 @@ func testAccCheckSilkVolumeExists(n string) resource.TestCheckFunc {
 }
 
 // testAccCheckSilkVolumeDestroy deletes the Volume Group, Hosts, and Host Groups created
-// as part of the PreCheck process
+// as part of the PreCheck process and then verifies the Volume was sussuccessfully destroyed
+// by the terraform destroy process
 func testAccCheckSilkVolumeDestroy(s *terraform.State) error {
+
+	// Required Silk Centric Variables
+	var volumeName = "TerraformTestAccVolume"
+	var volumeGroupName = "TerraformTestAccVolumeVG"
+	var hostNames = []string{"TerraformTestAccVolumeHost01", "TerraformTestAccVolumeHost02"}
+	var hostGroupNames = []string{"TerraformTestAccVolumeHG01", "TerraformTestAccVolumeHG02"}
 
 	silk, err := silksdp.ConnectEnv()
 	if err != nil {
@@ -239,6 +247,16 @@ func testAccCheckSilkVolumeDestroy(s *terraform.State) error {
 		if err != nil {
 			return err
 		}
+
+	}
+
+	// Validate the Volume has been destroyed
+	_, err = silk.GetVolumeID(volumeName)
+	if err != nil {
+		if strings.Contains(err.Error(), "The server does not contain") {
+			return nil
+		}
+		return err
 
 	}
 
