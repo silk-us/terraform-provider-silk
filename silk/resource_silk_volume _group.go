@@ -162,7 +162,7 @@ func resourceSilkVolumeGroupUpdate(ctx context.Context, d *schema.ResourceData, 
 	}
 
 	if d.HasChange("enable_deduplication") {
-		config["is_dedupe"] = d.Get("enable_deduplication").(bool)
+		return diag.Errorf("enable_deduplication can not be updated after the initial configuration")
 	}
 
 	if d.HasChange("description") {
