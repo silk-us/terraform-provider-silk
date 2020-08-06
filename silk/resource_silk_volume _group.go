@@ -27,7 +27,8 @@ func resourceSilkVolumeGroup() *schema.Resource {
 			},
 			"quota_in_gb": {
 				Type:        schema.TypeInt,
-				Required:    true,
+				Optional:    true,
+				Default:     0,
 				Description: "The size quota, in GB, of the Volume Group.",
 			},
 			"enable_deduplication": {
@@ -123,7 +124,17 @@ func resourceSilkVolumeGroupRead(ctx context.Context, d *schema.ResourceData, m 
 			}
 
 			d.Set("name", volumeGroup.Name)
-			d.Set("quota_in_gb", volumeGroup.Quota.(float64)/1024/1024)
+
+			// When the Volume Group is set to an unlimated quota
+			// the API will return a nil interface which causes
+			// an error to be thrown when trying to convert from
+			//  the usual float64
+			if fmt.Sprintf("%T", volumeGroup.Quota) == "float64" {
+				d.Set("quota_in_gb", volumeGroup.Quota.(float64)/1024/1024)
+			} else {
+				d.Set("quota_in_gb", 0)
+			}
+
 			d.Set("enable_deduplication", volumeGroup.IsDedup)
 			d.Set("description", volumeGroup.Description)
 
