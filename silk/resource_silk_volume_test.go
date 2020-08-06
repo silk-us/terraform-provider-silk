@@ -48,6 +48,12 @@ func TestAccSilkVolume(t *testing.T) {
 					testAccCheckSilkVolumeExists("silk_volume.testacc"),
 				),
 			},
+			{
+				Config: testAccCheckSilkVolumeConfigUpdate(volumeName, volumeGroupName),
+				Check: resource.ComposeTestCheckFunc(
+					testAccCheckSilkVolumeExists("silk_volume.testacc"),
+				),
+			},
 		},
 	})
 }
@@ -176,7 +182,7 @@ func testAccCheckSilkVolumeConfigRemoveMapping(name, volumeGroupName string) str
 
 }
 
-// testAccCheckSilkVolumeConfigUpdate modifies the size_in_gb, vmware, description, and read_only
+// testAccCheckSilkVolumeConfigUpdate modifies the size_in_gb, description, and read_only
 // paramaters to validated Update functionality
 func testAccCheckSilkVolumeConfigUpdate(name, volumeGroupName string) string {
 	return fmt.Sprintf(`
@@ -184,7 +190,7 @@ func testAccCheckSilkVolumeConfigUpdate(name, volumeGroupName string) string {
 		name = "%s"
 		size_in_gb = 20
 		volume_group_name = "%s"
-		vmware = false
+		vmware = true
 		description = "Updated. Volume used for Terraform silk_volume Acceptance Testing"
 		read_only = true
 		host_mapping = []
