@@ -11,6 +11,18 @@
 
 Installation and Usage information can be found in the Silk Terraform Provider [Quick Start Guide](https://github.com/silk-us/silk-terraform-provider/blob/master/docs/quick_start.md).
 
+# Example
+
+```hcl
+provider "silk" {}
+
+resource "silk_volume_group" "Silk-Volume-Group" {
+  name = "TerraformVolumeGroup"
+  quota_in_gb = 30
+  enable_deduplication = true
+  description = "Crated through TF"
+}
+```
 # Documentation
 
 * [Provider](https://github.com/silk-us/silk-terraform-provider/tree/master/docs)
