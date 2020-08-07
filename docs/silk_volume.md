@@ -5,10 +5,17 @@ Manage a Volume on the Silk Server.
 ## Example Usage
 
 ``` hcl
-resource "silk_volume_group" "Silk-Volume-Group" {
-  name = "TerraformVolumeGroup"
-  description = "Crated through TF"
-}
+resource "silk_volume" "Silk-Volume" {
+		name = "ExampleVolumeName"
+		size_in_gb = 10
+		volume_group_name = "ExampleVolumeGroupName"
+		vmware = true
+		description = "Created through Terraform"
+		read_only = false
+		host_mapping = ["ExampleHostName"]
+		host_group_mapping = ["ExampleHostGroupName"]
+		allow_destroy = true
+	}
 ```
 
 ## Argument Reference
