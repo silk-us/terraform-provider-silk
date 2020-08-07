@@ -18,7 +18,8 @@
 	// Add the IDs of extensions you want installed when the container is created.
 	"extensions": [
 		"golang.Go",
-		"hashicorp.terraform"
+		"hashicorp.terraform",
+		"yzhang.markdown-all-in-one"
 	],
 
 	// Use 'postCreateCommand' to run commands after the container is created.
