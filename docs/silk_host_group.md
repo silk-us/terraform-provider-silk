@@ -1,4 +1,4 @@
-## silk_host_group
+# silk_host_group
 
 Manage a Host Group on the Silk Server.
 
