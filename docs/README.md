@@ -45,7 +45,7 @@ You can provide your credentials via the `SILK_SDP_SERVER` , `SILK_SDP_USERNAME`
 and password, respectively.
 
 ``` sh
-$ export SILK_SDP_SERVER="192.0.1.6011"
+$ export SILK_SDP_SERVER="192.0.1.011"
 $ export SILK_SDP_USERNAME="admin"
 $ export SILK_SDP_PASSWORD="admin"
 ```
@@ -60,6 +60,6 @@ The following arguments are supported in the Silk `provider` block:
 
 * `server` - (Optional) The IP Address of a Silk server. The value may also be sourced from the `SILK_SDP_SERVER` environment variable.
 
-* `username` - (Optional)The username used to authenticate against the Silk server. The value may also be sourced from the `SILK_SDP_USERNAME` environment variable.
+* `username` - (Optional) The username used to authenticate against the Silk server. The value may also be sourced from the `SILK_SDP_USERNAME` environment variable.
 
-* `password` - (Optional)The password used to authenticate against the Silk Sever. The value may also be sourced from the `SILK_SDP_PASSWORD` environment variable.
+* `password` - (Optional) The password used to authenticate against the Silk Sever. The value may also be sourced from the `SILK_SDP_PASSWORD` environment variable.
