@@ -41,13 +41,11 @@ func resourceSilkHost() *schema.Resource {
 				Description: "An optional list of PWWNs that are mapped to the Host.",
 			},
 			"iqn": {
-				Type:     schema.TypeList,
-				Required: false,
-				Optional: true,
-				Elem: &schema.Schema{
-					Type: schema.TypeString,
-				},
-				Description: "An optional list of IQNs that are mapped to the Host.",
+				Type:        schema.TypeString,
+				Required:    false,
+				Optional:    true,
+				Default:     "",
+				Description: "The IQN that is mapped to the Host.",
 			},
 			"timeout": {
 				Type:        schema.TypeInt,
@@ -66,7 +64,7 @@ func resourceSilkHostCreate(ctx context.Context, d *schema.ResourceData, m inter
 	name := d.Get("name").(string)
 	hostType := d.Get("host_type").(string)
 	pwwn := d.Get("pwwn").([]interface{})
-	iqn := d.Get("iqn").([]interface{})
+	iqn := d.Get("iqn").(string)
 	timeout := d.Get("timeout").(int)
 
 	silk := m.(*silksdp.Credentials)
@@ -85,12 +83,10 @@ func resourceSilkHostCreate(ctx context.Context, d *schema.ResourceData, m inter
 		}
 	}
 
-	if len(iqn) != 0 {
-		for _, i := range iqn {
-			_, err := silk.CreateHostIQN(name, i.(interface{}).(string))
-			if err != nil {
-				return diag.FromErr(err)
-			}
+	if iqn != "" {
+		_, err := silk.CreateHostIQN(name, iqn)
+		if err != nil {
+			return diag.FromErr(err)
 		}
 	}
 
@@ -142,9 +138,9 @@ func resourceSilkHostRead(ctx context.Context, d *schema.ResourceData, m interfa
 
 			}
 
-			if len(d.Get("iqn").([]interface{})) != 0 {
+			if d.Get("iqn").(string) != "" {
 
-				// Get the current PWWNs on the host and then set the TF pwwn value with
+				// Get the current IQNs on the host and then set the TF IQN value with
 				// those responses
 				iqns := []string{}
 				getIQN, err := silk.GetHostIQN(d.Get("name").(string))
@@ -155,12 +151,12 @@ func resourceSilkHostRead(ctx context.Context, d *schema.ResourceData, m interfa
 					iqns = append(iqns, value.Iqn)
 				}
 
-				// Sort the new slice to prevent any TF comparison issues
-				sort.Slice(iqns, func(i, j int) bool {
-					return iqns[i] < iqns[j]
-				})
+				if len(iqns) == 0 {
+					d.Set("iqn", "")
 
-				d.Set("iqn", iqns)
+				} else {
+					d.Set("iqn", iqns[0])
+				}
 
 			}
 
@@ -256,64 +252,35 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 
 	}
 
-	iqnToRemove := []string{}
-	iqnToAdd := []string{}
 	if d.HasChange("iqn") {
 
-		// Get the current (c) and new (n) iqn hosts
 		c, n := d.GetChange("iqn")
-		// Use reflection to convert c and n into values that can be ranged through
-		// without crashing Terraform
-		cReflect := reflect.ValueOf(c)
-		nReflect := reflect.ValueOf(n)
-		// Create new []string{}, that holds the values of c, n, that can be ranged
-		// through
-		current := []string{}
-		new := []string{}
-		// Loop through cReflect and append values to current
-		for i := 0; i < cReflect.Len(); i++ {
-			current = append(current, cReflect.Index(i).Interface().(string))
-		}
-		// Loop through nReflect and append values to new
-		for i := 0; i < nReflect.Len(); i++ {
-			new = append(new, nReflect.Index(i).Interface().(string))
-		}
 
-		// Adding IQNs
-		if len(current) < len(new) {
-			// Find all IQNs that have been added to the IQN slice
-			for _, i := range new {
-				_, found := find(current, i)
-				if !found {
-					iqnToAdd = append(iqnToAdd, i)
-				}
+		// There was a change the current value is blank so we know an IQN needs to be added
+		if c.(string) == "" {
+			_, err := silk.CreateHostIQN(d.Get("name").(string), d.Get("iqn").(string), timeout)
+			if err != nil {
+				return diag.FromErr(err)
 			}
-
-			// Add each IQN to the Host
-			for _, i := range iqnToAdd {
-				_, err := silk.CreateHostIQN(d.Get("name").(string), i)
-				if err != nil {
-					return diag.FromErr(err)
-				}
-			}
-
 		} else {
+			// There was change and the current IQN is not blank so know we need to either remove
+			// or changed the IQN
 
-			// Find all IQNs that have been removed from the IQNs slice
-			for _, i := range current {
-				_, found := find(new, i)
-				if !found {
-					iqnToRemove = append(iqnToRemove, i)
-				}
+			// No mater the situation we are going to need to remove
+			// the IQN from the Host (i.e in order to change we have to first remove)
+			_, err := silk.DeleteHostIQN(d.Get("name").(string), timeout)
+			if err != nil {
+				return diag.FromErr(err)
 			}
 
-			// Remove each IQN from the Host
-			for _, i := range iqnToRemove {
-				_, err := silk.DeleteHostIndividualIQN(d.Get("name").(string), i)
+			// The new value is not blank so we know its an 'update' scenario
+			if n.(string) != "" {
+				_, err := silk.CreateHostIQN(d.Get("name").(string), d.Get("iqn").(string), timeout)
 				if err != nil {
 					return diag.FromErr(err)
 				}
 			}
+
 		}
 
 	}
@@ -351,15 +318,4 @@ func resourceSilkHostDelete(ctx context.Context, d *schema.ResourceData, m inter
 	d.SetId("")
 
 	return diags
-}
-
-// find is a helper function that is used to determine if val is in the slice
-// This is mainly used to find the PWWN that need be added or removed from the host.
-func find(slice []string, val string) (int, bool) {
-	for i, item := range slice {
-		if item == val {
-			return i, true
-		}
-	}
-	return -1, false
 }

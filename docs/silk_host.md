@@ -19,7 +19,7 @@ The following arguments are supported:
 * `name` - (Required) The name of the Host.
 * `host_type` - (Required) The type of Host. Valid choices are "Linux", "Windows", and "ESX".
 * `pwwn` - (Optional) An list of PWWNs that are mapped to the Host.
-* `iqn` - (Optional) An list of IQNs that are mapped to the Host.
+* `iqn` - (Optional) The IQN that is mapped to the Host.
 * `timeout` - (Optional) The number of seconds to wait to establish a connection the Silk server before returning a timeout error Default is `15`.
 
 ## Attribute Reference
