@@ -14,3 +14,14 @@ func (c *Config) Client() (*silksdp.Credentials, error) {
 
 	return silksdp.Connect(c.Server, c.Username, c.Password), nil
 }
+
+// find is a helper function that is used to determine if val is in the slice
+// This is mainly used to find the PWWN that need be added or removed from the host.
+func find(slice []string, val string) (int, bool) {
+	for i, item := range slice {
+		if item == val {
+			return i, true
+		}
+	}
+	return -1, false
+}
