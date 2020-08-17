@@ -96,10 +96,10 @@ func resourceSilkRetentionPolicyRead(ctx context.Context, d *schema.ResourceData
 		if RetentionPolicy.Name == d.Get("name").(string) {
 
 			d.Set("name", RetentionPolicy.Name)
-			d.Set("num_snapshots", RetentionPolicy.num_snapshots)
-			d.Set("weeks", RetentionPolicy.weeks)
-			d.Set("days", RetentionPolicy.days)
-			d.Set("hours", RetentionPolicy.hours)
+			d.Set("num_snapshots", RetentionPolicy.NumSnapshots)
+			d.Set("weeks", RetentionPolicy.Weeks)
+			d.Set("days", RetentionPolicy.Days)
+			d.Set("hours", RetentionPolicy.Hours)
 
 			// Stop the loop and return a nil err
 			return diags
