@@ -27,28 +27,28 @@ func resourceSilkCapacityPolicy() *schema.Resource {
 			"warningwhreshold": {
 				Type:        schema.TypeInt,
 				Required:    true,
-				Description: "",
+				Description: "Percentage of used capacity required to trigger a 'warning'.",
 			},
 			"errorthreshold": {
 				Type:        schema.TypeInt,
 				Required:    true,
-				Description: "",
+				Description: "Percentage of used capacity required to trigger an 'error'.",
 			},
 			"criticalthreshold": {
 				Type:        schema.TypeInt,
 				Required:    true,
-				Description: "",
+				Description: "Percentage of used capacity required to trigger a 'critical' alert.",
 			},
 			"fullthreshold": {
 				Type:        schema.TypeInt,
 				Required:    true,
-				Description: "",
+				Description: "Percentage of used capacity required to trigger a 'full' alert.",
 			},
 			"snapshotoverheadthreshold": {
 				Type:        schema.TypeInt,
 				Optional:    true,
 				Default:     0,
-				Description: "",
+				Description: "Percentage of capacity used by snapshots to generate an alert.",
 			},
 			"timeout": {
 				Type:        schema.TypeInt,
