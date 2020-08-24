@@ -40,6 +40,10 @@ The following attributes are exported:
 
 On `terraform destroy`, this resource will remove the capacity Policy from the Silk server.
 
+<<<<<<< HEAD
 ## Update Behavior
+=======
+## Destroy Behavior
+>>>>>>> c880c388f9ee6496f3d311005bf89885281435b2
 
 on `terraform update`, this resource will destroy and then create replacement. 

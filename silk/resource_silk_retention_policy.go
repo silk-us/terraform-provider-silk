@@ -27,7 +27,7 @@ func resourceSilkRetentionPolicy() *schema.Resource {
 			"num_snapshots": {
 				Type:        schema.TypeString,
 				Optional:    true,
-				Description: "",
+				Description: "Number of snapshots permitted in the policy",
 			},
 			"weeks": {
 				Type:        schema.TypeString,
