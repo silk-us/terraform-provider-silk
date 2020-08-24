@@ -22,32 +22,38 @@ func resourceSilkCapacityPolicy() *schema.Resource {
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
+				ForceNew:    true,
 				Description: "The name of the Volume Group.",
 			},
-			"warningwhreshold": {
+			"warningthreshold": {
 				Type:        schema.TypeInt,
 				Required:    true,
+				ForceNew:    true,
 				Description: "Percentage of used capacity required to trigger a 'warning'.",
 			},
 			"errorthreshold": {
 				Type:        schema.TypeInt,
 				Required:    true,
+				ForceNew:    true,
 				Description: "Percentage of used capacity required to trigger an 'error'.",
 			},
 			"criticalthreshold": {
 				Type:        schema.TypeInt,
 				Required:    true,
+				ForceNew:    true,
 				Description: "Percentage of used capacity required to trigger a 'critical' alert.",
 			},
+			/* despite this being a valid parameter, it is always set for 100 despite the provided value, this plays hell with the resource state so I'm forcing it to 100 in the create function.
 			"fullthreshold": {
 				Type:        schema.TypeInt,
 				Required:    true,
 				Description: "Percentage of used capacity required to trigger a 'full' alert.",
 			},
+			*/
 			"snapshotoverheadthreshold": {
 				Type:        schema.TypeInt,
 				Optional:    true,
-				Default:     0,
+				ForceNew:    true,
 				Description: "Percentage of capacity used by snapshots to generate an alert.",
 			},
 			"timeout": {
@@ -65,16 +71,16 @@ func resourceSilkCapacityPolicyCreate(ctx context.Context, d *schema.ResourceDat
 
 	// Read in the resource schema arguments for easier assignment
 	name := d.Get("name").(string)
-	warningwhreshold := d.Get("warningwhreshold").(int)
+	warningthreshold := d.Get("warningthreshold").(int)
 	errorthreshold := d.Get("errorthreshold").(int)
 	criticalthreshold := d.Get("criticalthreshold").(int)
-	fullthreshold := d.Get("fullthreshold").(int)
+	fullthreshold := 100
 	snapshotoverheadthreshold := d.Get("snapshotoverheadthreshold").(int)
 	timeout := d.Get("timeout").(int)
 
 	silk := m.(*silksdp.Credentials)
 
-	CapacityPolicy, err := silk.CreateCapacityPolicy(name, warningwhreshold, errorthreshold, criticalthreshold, fullthreshold, snapshotoverheadthreshold, timeout)
+	CapacityPolicy, err := silk.CreateCapacityPolicy(name, warningthreshold, errorthreshold, criticalthreshold, fullthreshold, snapshotoverheadthreshold, timeout)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -104,7 +110,7 @@ func resourceSilkCapacityPolicyRead(ctx context.Context, d *schema.ResourceData,
 		if CapacityPolicy.Name == d.Get("name").(string) {
 
 			d.Set("name", CapacityPolicy.Name)
-			d.Set("warningwhreshold", CapacityPolicy.WarningThreshold)
+			d.Set("warningthreshold", CapacityPolicy.WarningThreshold)
 			d.Set("errorthreshold", CapacityPolicy.ErrorThreshold)
 			d.Set("criticalthreshold", CapacityPolicy.CriticalThreshold)
 			d.Set("fullthreshold", CapacityPolicy.FullThreshold)
@@ -122,6 +128,7 @@ func resourceSilkCapacityPolicyRead(ctx context.Context, d *schema.ResourceData,
 }
 
 func resourceSilkCapacityPolicyUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+	/* This endpoint does not provide a PATCH method, so this was written in waste.
 
 	silk := m.(*silksdp.Credentials)
 
@@ -133,15 +140,15 @@ func resourceSilkCapacityPolicyUpdate(ctx context.Context, d *schema.ResourceDat
 	if d.HasChange("name") {
 		config["name"] = d.Get("name").(string)
 		// If the name changed in Terraform, we need to look up the "original" name (i.e what is currently is on the Silk server)
-		// to push the new name change to the volume
+		// to push the new name change to the object
 		currentCapacityPolicyName, _ := d.GetChange("name")
 		CapacityPolicyName = currentCapacityPolicyName.(string)
 	} else {
 		CapacityPolicyName = d.Get("name").(string)
 	}
 
-	if d.HasChange("warningwhreshold") {
-		config["warningwhreshold"] = d.Get("warningwhreshold").(int)
+	if d.HasChange("warningthreshold") {
+		config["warningthreshold"] = d.Get("warningthreshold").(int)
 	}
 
 	if d.HasChange("errorthreshold") {
@@ -164,6 +171,8 @@ func resourceSilkCapacityPolicyUpdate(ctx context.Context, d *schema.ResourceDat
 	if err != nil {
 		return diag.FromErr(err)
 	}
+
+	*/
 
 	return resourceSilkCapacityPolicyRead(ctx, d, m)
 }
