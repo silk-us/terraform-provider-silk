@@ -30,3 +30,5 @@ resource "silk_volume_group" "Silk-Volume-Group" {
 * [silk_host_group](https://github.com/silk-us/silk-terraform-provider/blob/master/docs/silk_host_group.md)
 * [silk_volume](https://github.com/silk-us/silk-terraform-provider/blob/master/docs/silk_volume.md)
 * [silk_volume_group](https://github.com/silk-us/silk-terraform-provider/blob/master/docs/silk_volume_group.md)
+* [silk_retention_policy](https://github.com/silk-us/terraform-provider-silk/blob/master/docs/silk_retention_policy.md)
+* [silk_capacity_policy](https://github.com/silk-us/terraform-provider-silk/blob/master/docs/silk_capacity_policy.md)
