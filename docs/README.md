@@ -5,6 +5,16 @@ The Silk Provider exposes resources to interact with a Silk server.
 ## Example Usage
 
 ``` hcl
+
+terraform {
+  required_providers {
+    silk = {
+      source  = "localdomain/provider/silk"
+      version = "1.0.9"
+    }
+  }
+}
+
 provider "silk" {}
 
 resource "silk_volume_group" "Silk-Volume-Group" {
