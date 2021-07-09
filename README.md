@@ -11,6 +11,10 @@
 
 Installation and Usage information can be found in the Silk Terraform Provider [Quick Start Guide](https://github.com/silk-us/silk-terraform-provider/blob/master/docs/quick_start.md).
 
+# Build
+
+Makefile is included, simply unzip the file and run `make` or `make install` Requires `Go`
+
 # Example
 
 ```hcl
@@ -23,6 +27,20 @@ resource "silk_volume_group" "Silk-Volume-Group" {
   description = "Crated through TF"
 }
 ```
+
+For Terraform version 0.13 or later, you will need to add a `required_providers` statement for this provider:
+
+```hcl
+terraform {
+  required_providers {
+    silk = {
+      source  = "localdomain/provider/silk"
+      version = "1.0.9"
+    }
+  }
+}
+```
+
 # Documentation
 
 * [Provider](https://github.com/silk-us/silk-terraform-provider/tree/master/docs)
