@@ -28,7 +28,13 @@ resource "silk_volume_group" "Silk-Volume-Group" {
 }
 ```
 
-For Terraform version 0.13 or later, you will need to add a `required_providers` statement for this provider:
+For Terraform version 0.13 or later, you will want to move the binary to an appropriate path and to add a `required_providers` statement for this provider. For example (for version 1.0.9):
+
+```
+mv terraform-provider-silk ~/.terraform.d/plugins/localdomain/provider/silk/1.0.9/linux_amd64
+```
+
+And then add the provider statement:
 
 ```hcl
 terraform {
