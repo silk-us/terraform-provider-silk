@@ -13,7 +13,7 @@ Installation and Usage information can be found in the Silk Terraform Provider [
 
 # Build
 
-Makefile is included, simply unzip the file and run `make` or `make install` Requires `Go`
+Makefile is included, simply unzip the file and run `make` or `make install`. Requires `Go`.
 
 # Example
 
