@@ -3,7 +3,7 @@ HOSTNAME=silk.us
 NAMESPACE=silk-terraform-provider
 NAME=silk
 BINARY=terraform-provider-${NAME}
-VERSION=0.1
+VERSION=1.0.9
 OS_ARCH=linux_amd64
 
 default: install
@@ -29,8 +29,8 @@ release:
 
 
 install: build
-	mkdir -p ~/.terraform.d/plugins/
-	mv ${BINARY} ~/.terraform.d/plugins
+	mkdir -p mkdir ~/.terraform.d/plugins/localdomain/provider/silk/${VERSION}/linux_amd64
+	mv ${BINARY} ~/.terraform.d/plugins/localdomain/provider/silk/${VERSION}/linux_amd64
 	
 
 test: 
