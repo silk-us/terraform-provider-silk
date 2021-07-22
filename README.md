@@ -11,6 +11,13 @@
 
 Installation and Usage information can be found in the Silk Terraform Provider [Quick Start Guide](https://github.com/silk-us/silk-terraform-provider/blob/master/docs/quick_start.md).
 
+# Release
+
+Place the appropriate binary from the release into the localdomain location for your terraform plugins. For example:
+```
+mv terraform-provider-silk_1.0.9_linux_amd64 ~/.terraform.d/plugins/localdomain/provider/silk/1.0.9/linux_amd64
+```
+
 # Build
 
 Makefile is included, simply unzip the file and run `make` or `make install`. Requires `Go`.
@@ -18,6 +25,16 @@ Makefile is included, simply unzip the file and run `make` or `make install`. Re
 # Example
 
 ```hcl
+
+terraform {
+  required_providers {
+    silk = {
+      source  = "localdomain/provider/silk"
+      version = "1.0.9"
+    }
+  }
+}
+
 provider "silk" {}
 
 resource "silk_volume_group" "Silk-Volume-Group" {
@@ -28,24 +45,7 @@ resource "silk_volume_group" "Silk-Volume-Group" {
 }
 ```
 
-For Terraform version 0.13 or later, you will want to move the binary to an appropriate path and to add a `required_providers` statement for this provider. For example (for version 1.0.9):
 
-```
-mv terraform-provider-silk ~/.terraform.d/plugins/localdomain/provider/silk/1.0.9/linux_amd64
-```
-
-And then add the provider statement:
-
-```hcl
-terraform {
-  required_providers {
-    silk = {
-      source  = "localdomain/provider/silk"
-      version = "1.0.9"
-    }
-  }
-}
-```
 
 # Documentation
 
