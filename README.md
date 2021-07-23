@@ -22,30 +22,6 @@ mv terraform-provider-silk_1.0.9_linux_amd64 ~/.terraform.d/plugins/localdomain/
 
 Makefile is included, simply unzip the file and run `make` or `make install`. Requires `Go`.
 
-# Example
-
-```hcl
-
-terraform {
-  required_providers {
-    silk = {
-      source  = "localdomain/provider/silk"
-      version = "1.0.9"
-    }
-  }
-}
-
-provider "silk" {}
-
-resource "silk_volume_group" "Silk-Volume-Group" {
-  name = "TerraformVolumeGroup"
-  quota_in_gb = 30
-  enable_deduplication = true
-  description = "Crated through TF"
-}
-```
-
-
 
 # Documentation
 
