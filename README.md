@@ -15,7 +15,7 @@ Installation and Usage information can be found in the Silk Terraform Provider [
 
 Place the appropriate binary from the release into the localdomain location for your terraform plugins. For example:
 ```
-mv terraform-provider-silk_1.0.9_linux_amd64 ~/.terraform.d/plugins/localdomain/provider/silk/1.0.9/linux_amd64
+mv terraform-provider-silk_1.0.9_linux_amd64 ~/.terraform.d/plugins/localdomain/provider/silk/1.0.9/linux_amd64/terraform-provider-silk
 ```
 
 # Build
