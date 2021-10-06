@@ -20,9 +20,9 @@ Windows: terraform-provider-silk-windows-amd64.exe
 2. Move the Silk provider into the correct Terraform plugin directory
 
 ``` 
-macOS: ~/.terraform.d/plugins/darwin_amd64
-Linux: ~/.terraform.d/plugins/linux_amd64
-Windows: %APPDATA%\terraform.d\plugins\windows_amd64
+macOS: ~/.terraform.d/plugins/localdomain/provider/silk/1.0.9/darwin_amd64
+Linux: ~/.terraform.d/plugins/localdomain/provider/silk/1.0.9/linux_amd64
+Windows: %APPDATA%\terraform.d\plugins\localdomain\provider\silk\1.0.9\windows_amd64
    ```   
    _You may need to manually create the `plugin` directory._
 
@@ -48,6 +48,15 @@ Storing credentials in environment variables is a more secure process than stori
 * **SILK_SDP_PASSWORD** (The password used to authenticate against the Silk Sever.)
 
 ``` hcl
+terraform {
+  required_providers {
+    silk = {
+      source  = "localdomain/provider/silk"
+      version = "1.0.9"
+    }
+  }
+}
+
 provider "Silk" {}
 ```
 
