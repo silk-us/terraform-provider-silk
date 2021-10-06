@@ -84,6 +84,11 @@ func resourceSilkVolume() *schema.Resource {
 				Default:     15,
 				Description: "The number of seconds to wait to establish a connection the Silk server before returning a timeout error.",
 			},
+			"scsi_sn": {
+				Computed:    true,
+				Type:        schema.TypeString,
+				Description: "The scsi serial number as string.",
+			},
 		},
 	}
 
@@ -213,6 +218,7 @@ func resourceSilkVolumeRead(ctx context.Context, d *schema.ResourceData, m inter
 			d.Set("description", volume.Description)
 			d.Set("read_only", volume.ReadOnly)
 			d.Set("allow_destroy", d.Get("allow_destroy").(bool))
+			d.Set("scsi_sn", volume.ScsiSn)
 
 			// Stop the loop and return a nil err
 			return diags

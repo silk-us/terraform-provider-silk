@@ -3,14 +3,13 @@ HOSTNAME=silk.us
 NAMESPACE=silk-terraform-provider
 NAME=silk
 BINARY=terraform-provider-${NAME}
-VERSION=1.0.9
+VERSION=1.0.10
 OS_ARCH=linux_amd64
 
 default: install
 
 build:
 	go build -o ${BINARY}
-	terraform init
 
 release:
 	GOOS=darwin GOARCH=amd64 go build -o ./bin/${BINARY}_${VERSION}_darwin_amd64
