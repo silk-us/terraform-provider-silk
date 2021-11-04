@@ -17,6 +17,9 @@ func resourceSilkCapacityPolicy() *schema.Resource {
 		ReadContext:   resourceSilkCapacityPolicyRead,
 		UpdateContext: resourceSilkCapacityPolicyUpdate,
 		DeleteContext: resourceSilkCapacityPolicyDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceSilkCapacityPolicyImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
@@ -24,6 +27,11 @@ func resourceSilkCapacityPolicy() *schema.Resource {
 				Required:    true,
 				ForceNew:    true,
 				Description: "The name of the Volume Group.",
+			},
+			"obj_id": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "The SDP ID of Capacity Policy.",
 			},
 			"warningthreshold": {
 				Type:        schema.TypeInt,
@@ -110,6 +118,7 @@ func resourceSilkCapacityPolicyRead(ctx context.Context, d *schema.ResourceData,
 		if CapacityPolicy.Name == d.Get("name").(string) {
 
 			d.Set("name", CapacityPolicy.Name)
+			d.Set("obj_id", CapacityPolicy.ID)
 			d.Set("warningthreshold", CapacityPolicy.WarningThreshold)
 			d.Set("errorthreshold", CapacityPolicy.ErrorThreshold)
 			d.Set("criticalthreshold", CapacityPolicy.CriticalThreshold)
@@ -193,4 +202,34 @@ func resourceSilkCapacityPolicyDelete(ctx context.Context, d *schema.ResourceDat
 	d.SetId("")
 
 	return diags
+}
+func resourceSilkCapacityPolicyImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	timeout := d.Get("timeout").(int)
+
+	silk := m.(*silksdp.Credentials)
+
+	getCapacityPolicy, err := silk.GetCapacityPolicy(timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, CapacityPolicy := range getCapacityPolicy.Hits {
+		if CapacityPolicy.Name == d.Id() {
+
+			d.Set("name", CapacityPolicy.Name)
+			d.Set("obj_id", CapacityPolicy.ID)
+			d.Set("warningthreshold", CapacityPolicy.WarningThreshold)
+			d.Set("errorthreshold", CapacityPolicy.ErrorThreshold)
+			d.Set("criticalthreshold", CapacityPolicy.CriticalThreshold)
+			d.Set("fullthreshold", CapacityPolicy.FullThreshold)
+			d.Set("snapshotoverheadthreshold", CapacityPolicy.SnapshotOverheadThreshold)
+			d.Set("timeout", 15)
+			d.SetId(fmt.Sprintf("silk-CapacityPolicy-%d-%s", CapacityPolicy.ID, strconv.FormatInt(time.Now().Unix(), 10)))
+
+		}
+	}
+
+	return []*schema.ResourceData{d}, nil
+
 }

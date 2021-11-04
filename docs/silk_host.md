@@ -12,6 +12,12 @@ resource "silk_host" "Silk-Host" {
 }
 ```
 
+### Import 
+
+```
+terraform import silk_host.{instance} {object name}
+```
+
 ## Argument Reference
 
 The following arguments are supported:

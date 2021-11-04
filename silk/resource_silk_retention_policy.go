@@ -17,12 +17,20 @@ func resourceSilkRetentionPolicy() *schema.Resource {
 		ReadContext:   resourceSilkRetentionPolicyRead,
 		UpdateContext: resourceSilkRetentionPolicyUpdate,
 		DeleteContext: resourceSilkRetentionPolicyDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceSilkRetentionPolicyImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The name of the Volume Group.",
+			},
+			"obj_id": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "The SDP ID of Host.",
 			},
 			"num_snapshots": {
 				Type:        schema.TypeString,
@@ -171,4 +179,31 @@ func resourceSilkRetentionPolicyDelete(ctx context.Context, d *schema.ResourceDa
 	d.SetId("")
 
 	return diags
+}
+func resourceSilkRetentionPolicyImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	timeout := d.Get("timeout").(int)
+
+	silk := m.(*silksdp.Credentials)
+
+	getRetentionPolicy, err := silk.GetRetentionPolicy(timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, RetentionPolicy := range getRetentionPolicy.Hits {
+		if RetentionPolicy.Name == d.Id() {
+
+			d.Set("name", RetentionPolicy.Name)
+			d.Set("num_snapshots", RetentionPolicy.NumSnapshots)
+			d.Set("weeks", RetentionPolicy.Weeks)
+			d.Set("days", RetentionPolicy.Days)
+			d.Set("hours", RetentionPolicy.Hours)
+			d.Set("obj_id", RetentionPolicy.ID)
+			d.Set("timeout", 15)
+			d.SetId(fmt.Sprintf("silk-RetentionPolicy-%d-%s", RetentionPolicy.ID, strconv.FormatInt(time.Now().Unix(), 10)))
+		}
+	}
+
+	return []*schema.ResourceData{d}, nil
 }

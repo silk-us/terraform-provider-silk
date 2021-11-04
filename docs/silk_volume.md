@@ -17,6 +17,11 @@ resource "silk_volume" "Silk-Volume" {
   allow_destroy = true
 }
 ```
+### Import 
+
+```
+terraform import silk_volume.{instance} {object name}
+```
 
 ## Argument Reference
 

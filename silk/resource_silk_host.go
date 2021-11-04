@@ -19,12 +19,20 @@ func resourceSilkHost() *schema.Resource {
 		ReadContext:   resourceSilkHostRead,
 		UpdateContext: resourceSilkHostUpdate,
 		DeleteContext: resourceSilkHostDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceSilkHostImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The name of the Host.",
+			},
+			"obj_id": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "The SDP ID of Host.",
 			},
 			"host_type": {
 				Type:        schema.TypeString,
@@ -55,7 +63,6 @@ func resourceSilkHost() *schema.Resource {
 			},
 		},
 	}
-
 }
 
 func resourceSilkHostCreate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -91,7 +98,7 @@ func resourceSilkHostCreate(ctx context.Context, d *schema.ResourceData, m inter
 	}
 
 	// Set the resource ID
-	d.SetId(fmt.Sprintf("silk-host-%d-%s", host.ID, strconv.FormatInt(time.Now().Unix(), 10)))
+	d.SetId(fmt.Sprintf("silk-host-%d-%s", host.ID, strconv.FormatInt(time.Now().Unix(), 10))) // <-- maybe simply make this the the name or host.ID?
 
 	return resourceSilkHostRead(ctx, d, m)
 }
@@ -110,11 +117,18 @@ func resourceSilkHostRead(ctx context.Context, d *schema.ResourceData, m interfa
 		return diag.FromErr(err)
 	}
 
+	// Gimme an id as an int <-- this breaks creation...
+	// hostID, err := strconv.Atoi(d.Id())
+	// if err != nil {
+	// 	return diag.FromErr(err)
+	// }
+
 	for _, host := range getHost.Hits {
 		if host.Name == d.Get("name").(string) {
 
 			d.Set("name", host.Name)
 			d.Set("host_type", host.Type)
+			d.Set("obj_id", host.ID)
 
 			if len(d.Get("pwwn").([]interface{})) != 0 {
 
@@ -318,4 +332,65 @@ func resourceSilkHostDelete(ctx context.Context, d *schema.ResourceData, m inter
 	d.SetId("")
 
 	return diags
+}
+
+func resourceSilkHostImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	timeout := d.Get("timeout").(int)
+
+	silk := m.(*silksdp.Credentials)
+
+	getHost, err := silk.GetHosts(timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, host := range getHost.Hits {
+		if host.Name == d.Id() {
+			// Set the base data
+			d.Set("name", host.Name)
+			d.Set("obj_id", host.ID)
+			d.Set("host_type", host.Type)
+			d.Set("timeout", 15)
+
+			// Check for IQNs
+			iqns := []string{}
+			getIQN, err := silk.GetHostIQN(d.Get("name").(string))
+			if err != nil {
+				return nil, err
+			}
+			for _, value := range getIQN {
+				iqns = append(iqns, value.Iqn)
+			}
+
+			if len(iqns) == 0 {
+				d.Set("iqn", "")
+
+			} else {
+				d.Set("iqn", iqns[0])
+			}
+
+			// Check for pwwns
+			pwwns := []string{}
+			getPwwn, err := silk.GetHostPWWN(d.Get("name").(string))
+			if err != nil {
+				return nil, err
+			}
+			for _, value := range getPwwn {
+				pwwns = append(pwwns, value.Pwwn)
+			}
+
+			// Sort the new slice to prevent any TF comparison issues
+			sort.Slice(pwwns, func(i, j int) bool {
+				return pwwns[i] < pwwns[j]
+			})
+
+			d.Set("pwwn", pwwns)
+
+			// Set the ID
+			d.SetId(fmt.Sprintf("silk-host-%d-%s", host.ID, strconv.FormatInt(time.Now().Unix(), 10)))
+		}
+	}
+
+	return []*schema.ResourceData{d}, nil
 }
