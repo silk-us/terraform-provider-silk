@@ -14,6 +14,12 @@ resource "silk_retention_policy" "default" {
 }
 ```
 
+### Import 
+
+```
+terraform import silk_retention_policy.{instance} {object name}
+```
+
 ## Argument Reference
 
 The following arguments are supported:

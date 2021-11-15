@@ -13,6 +13,12 @@ resource "silk_host_group" "Silk-Host-Group" {
 }
 ```
 
+### Import 
+
+```
+terraform import silk_host_group.{instance} {object name}
+```
+
 ## Argument Reference
 
 The following arguments are supported:

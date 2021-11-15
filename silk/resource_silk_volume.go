@@ -20,12 +20,20 @@ func resourceSilkVolume() *schema.Resource {
 		ReadContext:   resourceSilkVolumeRead,
 		UpdateContext: resourceSilkVolumeUpdate,
 		DeleteContext: resourceSilkVolumeDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceSilkVolumeImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The name of the Volume.",
+			},
+			"obj_id": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "The SDP ID of Volume.",
 			},
 			"size_in_gb": {
 				Type:        schema.TypeInt,
@@ -212,6 +220,7 @@ func resourceSilkVolumeRead(ctx context.Context, d *schema.ResourceData, m inter
 			}
 
 			d.Set("name", volume.Name)
+			d.Set("obj_id", volume.ID)
 			d.Set("size_in_gb", volume.Size/1024/1024) // Convert to GB
 
 			d.Set("vmware", volume.VmwareSupport)
@@ -439,4 +448,80 @@ func resourceSilkVolumeDelete(ctx context.Context, d *schema.ResourceData, m int
 	d.SetId("")
 
 	return diags
+}
+
+func resourceSilkVolumeImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	timeout := d.Get("timeout").(int)
+
+	silk := m.(*silksdp.Credentials)
+
+	getVolume, err := silk.GetVolumes(timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, volume := range getVolume.Hits {
+		if volume.Name == d.Id() {
+			// Since the API shows the Volume Group as an ID, we have to strip the ID from the provided ref and then
+			// look up the volume name based off of that ID. From there we can run d.Set("volume_group_name")
+			volumeGroupRefID, err := strconv.Atoi(strings.Replace(volume.VolumeGroup.Ref, "/volume_groups/", "", 1))
+			// If any error occured while getting the volumes volume group id, set the volume group id to blank since we can
+			// assume there is not one present
+			if err != nil {
+				d.Set("volume_group_name", "")
+			}
+
+			// Get the current volume groups on the server
+			getVolumeGroups, err := silk.GetVolumeGroups(timeout)
+			if err != nil {
+				return nil, err
+			}
+
+			for _, volumeGroup := range getVolumeGroups.Hits {
+				if volumeGroup.ID == volumeGroupRefID {
+					d.Set("volume_group_name", volumeGroup.Name)
+				}
+			}
+
+			// Get the current hosts mapped to the volume then set the TF host_mapping value with
+			// those responses
+			hostsMappedToVolume, err := silk.GetVolumeHostMappings(d.Id())
+			if err == nil {
+				sort.Slice(hostsMappedToVolume, func(i, j int) bool {
+					return hostsMappedToVolume[i] < hostsMappedToVolume[j]
+				})
+
+				d.Set("host_mapping", hostsMappedToVolume)
+			}
+
+			// Get the current hosts mapped to the volume then set the TF host_mapping value with
+			// those responses
+			hostGroupsMappedToVolume, err := silk.GetVolumeHostGroupMappings(d.Id())
+			if err == nil {
+				sort.Slice(hostGroupsMappedToVolume, func(i, j int) bool {
+					return hostGroupsMappedToVolume[i] < hostGroupsMappedToVolume[j]
+				})
+
+				d.Set("host_group_mapping", hostGroupsMappedToVolume)
+			}
+			// Sort the new slice to prevent any TF comparison issues
+
+			d.Set("name", volume.Name)
+			d.Set("obj_id", volume.ID)
+			d.Set("size_in_gb", volume.Size/1024/1024) // Convert to GB
+
+			d.Set("vmware", volume.VmwareSupport)
+			d.Set("description", volume.Description)
+			d.Set("read_only", volume.ReadOnly)
+			d.Set("allow_destroy", d.Get("allow_destroy").(bool))
+			d.Set("scsi_sn", volume.ScsiSn)
+			d.Set("timeout", 15)
+			d.SetId(fmt.Sprintf("silk-volume-%d-%s", volume.ID, strconv.FormatInt(time.Now().Unix(), 10)))
+
+			// Stop the loop and return a nil err
+		}
+	}
+
+	return []*schema.ResourceData{d}, nil
 }

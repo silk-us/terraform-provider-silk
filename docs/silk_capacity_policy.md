@@ -14,6 +14,12 @@ resource "silk_capacity_policy" "default" {
 }
 ```
 
+### Import 
+
+```
+terraform import silk_capacity_policy.{instance} {object name}
+```
+
 ## Argument Reference
 
 The following arguments are supported:

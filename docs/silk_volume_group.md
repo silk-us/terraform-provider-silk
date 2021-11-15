@@ -11,6 +11,12 @@ resource "silk_volume_group" "Silk-Volume-Group" {
 }
 ```
 
+### Import 
+
+```
+terraform import silk_volume_group.{instance} {object name}
+```
+
 ## Argument Reference
 
 The following arguments are supported:

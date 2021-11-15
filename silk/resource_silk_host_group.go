@@ -19,12 +19,20 @@ func resourceSilkHostGroup() *schema.Resource {
 		ReadContext:   resourceSilkHostGroupRead,
 		UpdateContext: resourceSilkHostGroupUpdate,
 		DeleteContext: resourceSilkHostGroupDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceSilkHostGroupImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The name of the Host Group.",
+			},
+			"obj_id": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "The SDP ID of Host.",
 			},
 			"description": {
 				Type:        schema.TypeString,
@@ -127,6 +135,7 @@ func resourceSilkHostGroupRead(ctx context.Context, d *schema.ResourceData, m in
 			d.Set("name", hostGroup.Name)
 			d.Set("description", hostGroup.Description)
 			d.Set("allow_different_host_types", hostGroup.AllowDifferentHostTypes)
+			d.Set("obj_id", hostGroup.ID)
 
 			// Stop the loop and return a nil err
 			return diags
@@ -247,4 +256,45 @@ func resourceSilkHostGroupDelete(ctx context.Context, d *schema.ResourceData, m 
 	d.SetId("")
 
 	return diags
+}
+
+func resourceSilkHostGroupImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	timeout := d.Get("timeout").(int)
+
+	silk := m.(*silksdp.Credentials)
+
+	getHostGroups, err := silk.GetHostGroups(timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, hostGroup := range getHostGroups.Hits {
+		if hostGroup.Name == d.Id() {
+
+			// Get the hosts in the host group and then set the TF host_mapping value with
+			// those responses
+			hostsInHostGroup, err := silk.GetHostGroupHosts(d.Id())
+			if err != nil {
+				return nil, err
+			}
+
+			// Sort the new slice to prevent any TF comparison issues
+			sort.Slice(hostsInHostGroup, func(i, j int) bool {
+				return hostsInHostGroup[i] < hostsInHostGroup[j]
+			})
+
+			d.Set("host_mapping", hostsInHostGroup)
+
+			d.Set("name", hostGroup.Name)
+			d.Set("description", hostGroup.Description)
+			d.Set("allow_different_host_types", hostGroup.AllowDifferentHostTypes)
+			d.Set("obj_id", hostGroup.ID)
+			d.Set("timeout", 15)
+			d.SetId(fmt.Sprintf("silk-host-group-%d-%s", hostGroup.ID, strconv.FormatInt(time.Now().Unix(), 10)))
+			// Stop the loop and return a nil err
+		}
+	}
+
+	return []*schema.ResourceData{d}, nil
 }

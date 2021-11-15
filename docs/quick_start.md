@@ -114,6 +114,11 @@ resource "silk_host" "Silk-Host" {
   pwwn = ["20:36:44:78:66:77:ab:10", "30:36:44:78:66:77:ab:10", "50:36:44:78:66:77:ab:10"]
 }
 ```
+### Import a Host
+
+```
+> terraform import silk_host.Silk-Host TerraformHost
+```
 
 ## Silk Provider for Terraform Documentation
 

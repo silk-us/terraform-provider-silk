@@ -18,12 +18,20 @@ func resourceSilkVolumeGroup() *schema.Resource {
 		ReadContext:   resourceSilkVolumeGroupRead,
 		UpdateContext: resourceSilkVolumeGroupUpdate,
 		DeleteContext: resourceSilkVolumeGroupDelete,
+		Importer: &schema.ResourceImporter{
+			StateContext: resourceSilkVolumeGroupImport,
+		},
 
 		Schema: map[string]*schema.Schema{
 			"name": {
 				Type:        schema.TypeString,
 				Required:    true,
 				Description: "The name of the Volume Group.",
+			},
+			"obj_id": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "The SDP ID of Volume Group.",
 			},
 			"quota_in_gb": {
 				Type:        schema.TypeInt,
@@ -124,6 +132,7 @@ func resourceSilkVolumeGroupRead(ctx context.Context, d *schema.ResourceData, m 
 			}
 
 			d.Set("name", volumeGroup.Name)
+			d.Set("obj_id", volumeGroup.ID)
 
 			// When the Volume Group is set to an unlimated quota
 			// the API will return a nil interface which causes
@@ -208,4 +217,69 @@ func resourceSilkVolumeGroupDelete(ctx context.Context, d *schema.ResourceData, 
 	d.SetId("")
 
 	return diags
+}
+func resourceSilkVolumeGroupImport(ctx context.Context, d *schema.ResourceData, m interface{}) ([]*schema.ResourceData, error) {
+
+	timeout := d.Get("timeout").(int)
+
+	silk := m.(*silksdp.Credentials)
+
+	getVolumeGroup, err := silk.GetVolumeGroups(timeout)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, volumeGroup := range getVolumeGroup.Hits {
+		if volumeGroup.Name == d.Id() {
+
+			// If the Volume Group has a capacity policy, parse the output for the capacity ID and then convert that to the
+			// policy name
+			if volumeGroup.CapacityPolicy != nil {
+				capacityPolicy := volumeGroup.CapacityPolicy.(map[string]interface{})
+				for _, value := range capacityPolicy {
+					capacityPolicyID, _ := strconv.Atoi(strings.Replace(value.(string), "/vg_capacity_policies/", "", 1))
+					// If an err is returned, we can assume the capacity policy is not present
+					if err != nil {
+						d.Set("capacity_policy", "")
+
+					}
+
+					capacityPolicyName, err := silk.GetCapacityPolicyName(capacityPolicyID, timeout)
+					if err != nil {
+						if strings.Contains(err.Error(), "The server does not contain") == true {
+							d.Set("capacity_policy", "")
+						}
+						return nil, err
+					}
+
+					d.Set("capacity_policy", capacityPolicyName)
+				}
+			} else {
+				d.Set("capacity_policy", "default_vg_capacity_policy")
+			}
+
+			d.Set("name", volumeGroup.Name)
+			d.Set("obj_id", volumeGroup.ID)
+
+			// When the Volume Group is set to an unlimated quota
+			// the API will return a nil interface which causes
+			// an error to be thrown when trying to convert from
+			//  the usual float64
+			if fmt.Sprintf("%T", volumeGroup.Quota) == "float64" {
+				d.Set("quota_in_gb", volumeGroup.Quota.(float64)/1024/1024)
+			} else {
+				d.Set("quota_in_gb", 0)
+			}
+
+			d.Set("enable_deduplication", volumeGroup.IsDedup)
+			d.Set("description", volumeGroup.Description)
+			d.Set("timeout", 15)
+			d.SetId(fmt.Sprintf("silk-volumeGroup-%d-%s", volumeGroup.ID, strconv.FormatInt(time.Now().Unix(), 10)))
+
+			// Stop the loop and return a nil err
+		}
+	}
+
+	return []*schema.ResourceData{d}, nil
+
 }
