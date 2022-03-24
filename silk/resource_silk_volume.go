@@ -440,6 +440,28 @@ func resourceSilkVolumeDelete(ctx context.Context, d *schema.ResourceData, m int
 
 	silk := m.(*silksdp.Credentials)
 
+	// Delete host_mappings before remove volume
+	currentHostMappings, _ := d.GetChange("host_mapping")
+	currentHostMappingsReflect := reflect.ValueOf(currentHostMappings)
+	for i := 0; i < currentHostMappingsReflect.Len(); i++ {
+		hostMappingToRemove := currentHostMappingsReflect.Index(i).Interface().(string)
+		_, err := silk.DeleteHostVolumeMapping(hostMappingToRemove, d.Get("name").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	// Delete host_group_mappings before remove volume
+	currentHostGroupMappings, _ := d.GetChange("host_group_mapping")
+	currentHostGroupMappingsReflect := reflect.ValueOf(currentHostGroupMappings)
+	for i := 0; i < currentHostGroupMappingsReflect.Len(); i++ {
+		hostGroupMappingToRemove := currentHostGroupMappingsReflect.Index(i).Interface().(string)
+		_, err := silk.DeleteHostGroupVolumeMapping(hostGroupMappingToRemove, d.Get("name").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
 	_, err := silk.DeleteVolume(name)
 	if err != nil {
 		return diag.FromErr(err)
