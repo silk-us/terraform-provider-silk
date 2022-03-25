@@ -28,7 +28,7 @@ release:
 
 
 install: build
-	mkdir -p mkdir ~/.terraform.d/plugins/localdomain/provider/silk/${VERSION}/linux_amd64
+	mkdir -p ~/.terraform.d/plugins/localdomain/provider/silk/${VERSION}/linux_amd64
 	mv ${BINARY} ~/.terraform.d/plugins/localdomain/provider/silk/${VERSION}/linux_amd64
 	
 
