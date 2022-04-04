@@ -264,37 +264,22 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 			}
 		}
 
-	}
-
 	if d.HasChange("iqn") {
 
 		c, n := d.GetChange("iqn")
 
-		// There was a change the current value is blank so we know an IQN needs to be added
-		if c.(string) == "" {
-			_, err := silk.CreateHostIQN(d.Get("name").(string), d.Get("iqn").(string), timeout)
+		if c.(string) != "" {
+		_, err := silk.DeleteHostIQN(currentHostName, timeout)
 			if err != nil {
 				return diag.FromErr(err)
 			}
-		} else {
-			// There was change and the current IQN is not blank so know we need to either remove
-			// or changed the IQN
-
-			// No mater the situation we are going to need to remove
-			// the IQN from the Host (i.e in order to change we have to first remove)
-			_, err := silk.DeleteHostIQN(d.Get("name").(string), timeout)
-			if err != nil {
-				return diag.FromErr(err)
 			}
 
-			// The new value is not blank so we know its an 'update' scenario
 			if n.(string) != "" {
-				_, err := silk.CreateHostIQN(d.Get("name").(string), d.Get("iqn").(string), timeout)
+			_, err := silk.CreateHostIQN(currentHostName, d.Get("iqn").(string), timeout)
 				if err != nil {
 					return diag.FromErr(err)
 				}
-			}
-
 		}
 
 	}
