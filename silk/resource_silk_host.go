@@ -79,26 +79,31 @@ func resourceSilkHostCreate(ctx context.Context, d *schema.ResourceData, m inter
 	host, err := silk.CreateHost(name, hostType, timeout)
 	if err != nil {
 		return diag.FromErr(err)
+	} else {
+		// Set the resource ID
+		d.SetId(fmt.Sprintf("silk-host-%d-%s", host.ID, strconv.FormatInt(time.Now().Unix(), 10))) // <-- maybe simply make this the the name or host.ID?
+		d.Set("obj_id", host.ID)
 	}
 
 	if len(pwwn) != 0 {
 		for _, p := range pwwn {
-			_, err := silk.CreateHostPWWN(name, p.(interface{}).(string))
+			_, err := silk.CreateHostPWWN(name, p.(interface{}).(string),timeout)
 			if err != nil {
 				return diag.FromErr(err)
+			} else {
+				d.Set("pwwn", pwwn)
 			}
 		}
 	}
 
 	if iqn != "" {
-		_, err := silk.CreateHostIQN(name, iqn)
+		_, err := silk.CreateHostIQN(name, iqn,timeout)
 		if err != nil {
 			return diag.FromErr(err)
+		} else {
+			d.Set("iqn", iqn)
 		}
 	}
-
-	// Set the resource ID
-	d.SetId(fmt.Sprintf("silk-host-%d-%s", host.ID, strconv.FormatInt(time.Now().Unix(), 10))) // <-- maybe simply make this the the name or host.ID?
 
 	return resourceSilkHostRead(ctx, d, m)
 }
@@ -124,7 +129,7 @@ func resourceSilkHostRead(ctx context.Context, d *schema.ResourceData, m interfa
 	// }
 
 	for _, host := range getHost.Hits {
-		if host.Name == d.Get("name").(string) {
+		if (d.Get("obj_id") != nil && host.ID == d.Get("obj_id").(int)) || (d.Get("obj_id") == nil && host.Name == d.Get("name").(string)) {
 
 			d.Set("name", host.Name)
 			d.Set("host_type", host.Type)
@@ -192,15 +197,15 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 	timeout := d.Get("timeout").(int)
 
 	config := map[string]interface{}{}
-	var hostName string
+	var currentHostName string
 	if d.HasChange("name") {
 		config["name"] = d.Get("name").(string)
 		// If the name changed in Terraform, we need to look up the "original" name (i.e what is currently is on the Silk server)
 		// to push the new name change to the volume
-		currentHostName, _ := d.GetChange("name")
-		hostName = currentHostName.(string)
+		oldHostName, _ := d.GetChange("name")
+		currentHostName = oldHostName.(string)
 	} else {
-		hostName = d.Get("name").(string)
+		currentHostName = d.Get("name").(string)
 	}
 
 	pwwnToRemove := []string{}
@@ -226,43 +231,33 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 			new = append(new, nReflect.Index(i).Interface().(string))
 		}
 
-		// Adding PWWNs
-		if len(current) < len(new) {
-			// Find all pwwns that have been added to the pwwn slice
-			for _, p := range new {
-				_, found := find(current, p)
-				if !found {
-					pwwnToAdd = append(pwwnToAdd, p)
-				}
-			}
+		union := unique(append(current, new... ))
+		for _, h := range union {
+			_, foundInNew := find(new, h)
+			_, foundInCurrent := find(current, h)
+			if foundInNew && !foundInCurrent {
+				pwwnToAdd = append(pwwnToAdd, h)
+			} else if !foundInNew && foundInCurrent {
+				pwwnToAdd = append(pwwnToRemove, h)
+			} 
+		}
 
-			// Add each PWWN to the Host
-			for _, p := range pwwnToAdd {
-				_, err := silk.CreateHostPWWN(d.Get("name").(string), p)
-				if err != nil {
-					return diag.FromErr(err)
-				}
-			}
-
-		} else {
-
-			// Find all pwwns that have been removed from the pwwn slice
-			for _, p := range current {
-				_, found := find(new, p)
-				if !found {
-					pwwnToRemove = append(pwwnToRemove, p)
-				}
-			}
-
-			// Remove each PWWN from the Host
-
-			for _, p := range pwwnToRemove {
-				_, err := silk.DeleteHostIndividualPWWN(d.Get("name").(string), p)
-				if err != nil {
-					return diag.FromErr(err)
-				}
+		// Add each PWWN to the Host
+		for _, p := range pwwnToAdd {
+			_, err := silk.CreateHostPWWN(currentHostName, p)
+			if err != nil {
+				return diag.FromErr(err)
 			}
 		}
+
+		// Remove each PWWN from the Host
+		for _, p := range pwwnToRemove {
+			_, err := silk.DeleteHostIndividualPWWN(currentHostName, p)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
+	}
 
 	if d.HasChange("iqn") {
 
@@ -273,13 +268,13 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 			if err != nil {
 				return diag.FromErr(err)
 			}
-			}
+		}
 
-			if n.(string) != "" {
+		if n.(string) != "" {
 			_, err := silk.CreateHostIQN(currentHostName, d.Get("iqn").(string), timeout)
-				if err != nil {
-					return diag.FromErr(err)
-				}
+			if err != nil {
+				return diag.FromErr(err)
+			}
 		}
 
 	}
@@ -291,11 +286,11 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 	// If only the PWWN or IQN changes the config map won't be populated
 	// and will throw an error
 	if len(config) != 0 {
-		_, err := silk.UpdateHost(hostName, config, timeout)
+		_, err := silk.UpdateHost(currentHostName, config, timeout)
 		if err != nil {
+			d.Set("name",currentHostName)
 			return diag.FromErr(err)
 		}
-
 	}
 
 	return resourceSilkHostRead(ctx, d, m)
@@ -304,15 +299,44 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 func resourceSilkHostDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-
+	
 	name := d.Get("name").(string)
+	timeout := d.Get("timeout").(int)
 
 	silk := m.(*silksdp.Credentials)
 
-	_, err := silk.DeleteHost(name)
+	
+	// host, err := silk.GetHost(name,timeout)
+	// if err != nil {
+	// 	return diag.FromErr(err)
+	// }
+	// if host.Hits[0].IsPartOfGroup {
+	// 	hostGroupRef := host.Hits[0].HostGroup.Ref
+	// 	hostGroupRefSplit := strings.Split(hostGroupRef,"/")
+	// 	hostGroupID, err := strconv.Atoi(hostGroupRefSplit[len(hostGroupRefSplit)-1])
+	// 	if err != nil{
+	// 		return diag.Errorf("Invalid hostgroup ID")
+	// 	}
+	// 	hostGroupName, err := silk.GetHostGroupName(hostGroupID)
+	// 	if err != nil{
+	// 		return diag.Errorf("Could not find hostgroup with ID=%d",hostGroupID) 
+	// 	}
+	// 	_,err = silk.DeleteHostHostGroupMapping(name,hostGroupName)
+	// 	if err != nil{
+	// 		return diag.FromErr(err) 
+	// 	} 
+	// }
+
+	// _, err = silk.DeleteHostMappings(name,timeout)
+	// if err != nil {
+	// 	return diag.FromErr(err)
+	// }
+
+
+	_, err := silk.DeleteHost(name,timeout)
 	if err != nil {
 		return diag.FromErr(err)
-	}
+	} 
 
 	d.SetId("")
 
