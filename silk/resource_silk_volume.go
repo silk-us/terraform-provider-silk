@@ -363,7 +363,7 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			_, foundInNew := find(new, h)
 			_, foundInCurrent := find(current, h)
 			if foundInNew && !foundInCurrent {
-				hostGroupMappingToRemove = append(hostGroupMappingToRemove, h)
+				hostGroupMappingToAdd = append(hostGroupMappingToAdd, h)
 			} else if !foundInNew && foundInCurrent {
 				hostGroupMappingToRemove = append(hostGroupMappingToRemove, h)
 			} 
