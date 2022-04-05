@@ -165,16 +165,16 @@ func resourceSilkVolumeGroupUpdate(ctx context.Context, d *schema.ResourceData, 
 	timeout := d.Get("timeout").(int)
 
 	config := map[string]interface{}{}
-	var volumeGroupName string
+	var currentVolumeGroupName string
 
 	if d.HasChange("name") {
 		config["name"] = d.Get("name").(string)
 		// If the name changed in Terraform, we need to look up the "original" name (i.e what is currently is on the Silk server)
 		// to push the new name change to the volume
-		currentVolumeGroupName, _ := d.GetChange("name")
-		volumeGroupName = currentVolumeGroupName.(string)
+		oldVolumeGroupName, _ := d.GetChange("name")
+		currentVolumeGroupName = oldVolumeGroupName.(string)
 	} else {
-		volumeGroupName = d.Get("name").(string)
+		currentVolumeGroupName = d.Get("name").(string)
 	}
 
 	if d.HasChange("quota_in_gb") {
@@ -193,8 +193,9 @@ func resourceSilkVolumeGroupUpdate(ctx context.Context, d *schema.ResourceData, 
 		config["capacityPolicy"] = d.Get("capacity_policy").(bool)
 	}
 
-	_, err := silk.UpdateVolumeGroup(volumeGroupName, config, timeout)
+	_, err := silk.UpdateVolumeGroup(currentVolumeGroupName, config, timeout)
 	if err != nil {
+		d.Set("name",currentVolumeGroupName)
 		return diag.FromErr(err)
 	}
 

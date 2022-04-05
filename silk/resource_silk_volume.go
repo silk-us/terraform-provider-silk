@@ -40,6 +40,11 @@ func resourceSilkVolume() *schema.Resource {
 				Required:    true,
 				Description: "The size, in GB, of the Volume.",
 			},
+			"volume_group_id": {
+				Type:        schema.TypeInt,
+				Computed:    true,
+				Description: "VolumeGroup ID (only used when renaming volumegroup name)",
+			},
 			"volume_group_name": {
 				Type:        schema.TypeString,
 				Required:    true,
@@ -179,6 +184,7 @@ func resourceSilkVolumeRead(ctx context.Context, d *schema.ResourceData, m inter
 
 			for _, volumeGroup := range getVolumeGroups.Hits {
 				if volumeGroup.ID == volumeGroupRefID {
+					d.Set("volume_group_id",volumeGroupRefID)
 					d.Set("volume_group_name", volumeGroup.Name)
 				}
 			}
@@ -247,19 +253,34 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	timeout := d.Get("timeout").(int)
 
 	config := map[string]interface{}{}
-	var volumeName string
+	var currentVolumeName string
 
 	if d.HasChange("name") {
-		if d.HasChange("volume_group_name") {
-			return diag.Errorf("The volume name cannot be changed while moving to another Volume Group")
-		}
+		// if d.HasChange("volume_group_name") {
+		// 	return diag.Errorf("The volume name cannot be changed while moving to another Volume Group")
+		// }
+
 		config["name"] = d.Get("name").(string)
+
 		// If the name changed in Terraform, we need to look up the "original" name (i.e what is currently is on the Silk server)
 		// to push the new name change to the volume
-		currentVolumeName, _ := d.GetChange("name")
-		volumeName = currentVolumeName.(string)
+		oldVolumeName, _ := d.GetChange("name")
+		currentVolumeName = oldVolumeName.(string)
+
+		// // If the name changed in Terraform, we need to look up the "original" name (i.e what is currently is on the Silk server)
+		// // to push the new name change to the volume
+		// currentVolumeName, _ := d.GetChange("name")
+		// volumeName = currentVolumeName.(string)
+		// nameChangeConfig := map[string]interface{}{
+		// 	"name":d.Get("name").(string),
+		// }
+		// _, err := silk.UpdateVolume(volumeName, nameChangeConfig, timeout)
+		// if err != nil {
+		// 	d.Set("name",volumeName)
+		// 	return diag.FromErr(err)
+		// }
 	} else {
-		volumeName = d.Get("name").(string)
+		currentVolumeName = d.Get("name").(string)
 	}
 
 	hostMappingToRemove := []string{}
@@ -285,40 +306,30 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			new = append(new, nReflect.Index(i).Interface().(string))
 		}
 
-		// Mapping Hosts
-		if len(current) < len(new) {
-			// Find all hosts that have been added to the host slice
-			for _, h := range new {
-				_, found := find(current, h)
-				if !found {
-					hostMappingToAdd = append(hostMappingToAdd, h)
-				}
+		union := unique(append(current, new... ))
+		for _, h := range union {
+			_, foundInNew := find(new, h)
+			_, foundInCurrent := find(current, h)
+			if foundInNew && !foundInCurrent {
+				hostMappingToAdd = append(hostMappingToAdd, h)
+			} else if !foundInNew && foundInCurrent {
+				hostMappingToRemove = append(hostMappingToRemove, h)
+			} 
+		}
+
+		// Add each Host to the Volume
+		for _, h := range hostMappingToAdd {
+			_, err := silk.CreateHostVolumeMapping(h, currentVolumeName)
+			if err != nil {
+				return diag.FromErr(err)
 			}
+		}
 
-			// Add each Host to the Volume
-			for _, h := range hostMappingToAdd {
-				_, err := silk.CreateHostVolumeMapping(h, d.Get("name").(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
-			}
-
-		} else {
-
-			// Find all Hosts that have been removed from the host_mapping slice
-			for _, h := range current {
-				_, found := find(new, h)
-				if !found {
-					hostMappingToRemove = append(hostMappingToRemove, h)
-				}
-			}
-
-			// Remove each Host from the Volume
-			for _, h := range hostMappingToRemove {
-				_, err := silk.DeleteHostVolumeMapping(h, d.Get("name").(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
+		// Remove each Host from the Volume
+		for _, h := range hostMappingToRemove {
+			_, err := silk.DeleteHostVolumeMapping(h, currentVolumeName)
+			if err != nil {
+				return diag.FromErr(err)
 			}
 		}
 
@@ -347,41 +358,30 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			new = append(new, nReflect.Index(i).Interface().(string))
 		}
 
-		// Mapping Host Group
-		if len(current) < len(new) {
-			// Find all Host Groups that have been added to the host_group_mapping slice
-			for _, hg := range new {
-				_, found := find(current, hg)
-				if !found {
-					hostGroupMappingToAdd = append(hostGroupMappingToAdd, hg)
-				}
+		union := unique(append(current, new... ))
+		for _, h := range union {
+			_, foundInNew := find(new, h)
+			_, foundInCurrent := find(current, h)
+			if foundInNew && !foundInCurrent {
+				hostGroupMappingToAdd = append(hostGroupMappingToAdd, h)
+			} else if !foundInNew && foundInCurrent {
+				hostGroupMappingToRemove = append(hostGroupMappingToRemove, h)
+			} 
+		}
+
+		// Map each Host Group to the Volume
+		for _, hg := range hostGroupMappingToAdd {
+			_, err := silk.CreateHostGroupVolumeMapping(hg, currentVolumeName)
+			if err != nil {
+				return diag.FromErr(err)
 			}
+		}
 
-			// Map each Host Group to the Volume
-			for _, hg := range hostGroupMappingToAdd {
-				_, err := silk.CreateHostGroupVolumeMapping(hg, d.Get("name").(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
-			}
-
-		} else {
-
-			// Find all Host Group that have been removed from the host_group_mapping slice
-			for _, hg := range current {
-				_, found := find(new, hg)
-				if !found {
-					hostGroupMappingToRemove = append(hostGroupMappingToRemove, hg)
-				}
-			}
-
-			// Remove each Host Group mapping from the Volume
-			for _, hg := range hostGroupMappingToRemove {
-				_, err := silk.DeleteHostGroupVolumeMapping(hg, d.Get("name").(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
+		// Remove each Host Group mapping from the Volume
+		for _, hg := range hostGroupMappingToRemove {
+			_, err := silk.DeleteHostGroupVolumeMapping(hg, currentVolumeName)
+			if err != nil {
+				return diag.FromErr(err)
 			}
 		}
 
@@ -396,10 +396,15 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 		if err != nil {
 			return diag.FromErr(err)
 		}
-		volumeGroupConfig := map[string]interface{}{}
-		volumeGroupConfig["ref"] = fmt.Sprintf("/volume_groups/%d", volumeGroupID)
 
-		config["volume_group"] = volumeGroupConfig
+		cGroupID_Interface,_ := d.GetChange("volume_group_id")
+		cGroupID := cGroupID_Interface.(int)
+		if volumeGroupID != cGroupID {
+			d.Set("volume_group_id",volumeGroupID)
+			volumeGroupConfig := map[string]interface{}{}
+			volumeGroupConfig["ref"] = fmt.Sprintf("/volume_groups/%d", volumeGroupID)
+			config["volume_group"] = volumeGroupConfig
+		}
 	}
 
 	if d.HasChange("vmware") {
@@ -418,8 +423,9 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	// The update function can be triggered when only the allow_destroy option has been changed.
 	// Since that does not require and update to Silk, skip the UpdateVolume() call.
 	if len(config) != 0 {
-		_, err := silk.UpdateVolume(volumeName, config, timeout)
+		_, err := silk.UpdateVolume(currentVolumeName, config, timeout)
 		if err != nil {
+			d.Set("name",currentVolumeName)
 			return diag.FromErr(err)
 		}
 
@@ -439,6 +445,28 @@ func resourceSilkVolumeDelete(ctx context.Context, d *schema.ResourceData, m int
 	name := d.Get("name").(string)
 
 	silk := m.(*silksdp.Credentials)
+
+	// Delete host_mappings before remove volume
+	currentHostMappings, _ := d.GetChange("host_mapping")
+	currentHostMappingsReflect := reflect.ValueOf(currentHostMappings)
+	for i := 0; i < currentHostMappingsReflect.Len(); i++ {
+		hostMappingToRemove := currentHostMappingsReflect.Index(i).Interface().(string)
+		_, err := silk.DeleteHostVolumeMapping(hostMappingToRemove, d.Get("name").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
+
+	// Delete host_group_mappings before remove volume
+	currentHostGroupMappings, _ := d.GetChange("host_group_mapping")
+	currentHostGroupMappingsReflect := reflect.ValueOf(currentHostGroupMappings)
+	for i := 0; i < currentHostGroupMappingsReflect.Len(); i++ {
+		hostGroupMappingToRemove := currentHostGroupMappingsReflect.Index(i).Interface().(string)
+		_, err := silk.DeleteHostGroupVolumeMapping(hostGroupMappingToRemove, d.Get("name").(string))
+		if err != nil {
+			return diag.FromErr(err)
+		}
+	}
 
 	_, err := silk.DeleteVolume(name)
 	if err != nil {

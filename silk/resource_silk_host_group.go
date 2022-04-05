@@ -165,6 +165,7 @@ func resourceSilkHostGroupUpdate(ctx context.Context, d *schema.ResourceData, m 
 
 		// Get the current (c) and new (n) host mappings
 		c, n := d.GetChange("host_mapping")
+		
 		// Use reflection to convert c and n into values that can be ranged through
 		// without crashing Terraform
 		cReflect := reflect.ValueOf(c)
@@ -183,43 +184,34 @@ func resourceSilkHostGroupUpdate(ctx context.Context, d *schema.ResourceData, m 
 		}
 
 		// Mapping Hosts
-		if len(current) < len(new) {
-			// Find all hosts that have been added to the host slice
-			for _, h := range new {
-				_, found := find(current, h)
-				if !found {
-					hostMappingToAdd = append(hostMappingToAdd, h)
-				}
-			}
+		union := unique(append(current, new... ))
+		for _, h := range union {
+			_, foundInNew := find(new, h)
+			_, foundInCurrent := find(current, h)
+			if foundInNew && !foundInCurrent {
+				hostMappingToAdd = append(hostMappingToAdd, h)
+			} else if !foundInNew && foundInCurrent {
+				hostMappingToRemove = append(hostMappingToRemove, h)
+			} 
+		}
 
-			// Add each Host to the Volume
-			for _, h := range hostMappingToAdd {
-				_, err := silk.CreateHostHostGroupMapping(h, d.Get("name").(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
-			}
-
-		} else {
-
-			// Find all Hosts that have been removed from the host_mapping slice
-			for _, h := range current {
-				_, found := find(new, h)
-				if !found {
-					hostMappingToRemove = append(hostMappingToRemove, h)
-				}
-			}
-
-			// Remove each Host from the Volume
-			for _, h := range hostMappingToRemove {
-				_, err := silk.DeleteHostHostGroupMapping(h, d.Get("name").(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
+		// Add each Host to the Volume
+		for _, h := range hostMappingToAdd {
+			_, err := silk.CreateHostHostGroupMapping(h, d.Get("name").(string))
+			if err != nil {
+				return diag.FromErr(err)
 			}
 		}
 
+		// Remove each Host from the Volume
+		for _, h := range hostMappingToRemove {
+			_, err := silk.DeleteHostHostGroupMapping(h, d.Get("name").(string))
+			if err != nil {
+				return diag.FromErr(err)
+			}
+		}
 	}
+
 
 	if d.HasChange("allow_different_host_types") {
 		config["allow_different_host_types"] = d.Get("allow_different_host_types").(bool)
