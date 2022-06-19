@@ -50,3 +50,4 @@ terraform.rc
 vendor/
 terraform-provider-silk
 main.tf
+terraform-provider-silk_*
