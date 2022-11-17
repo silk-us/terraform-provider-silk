@@ -160,7 +160,9 @@ func resourceSilkVolumeRead(ctx context.Context, d *schema.ResourceData, m inter
 
 	silk := m.(*silksdp.Credentials)
 
-	getVolume, err := silk.GetVolumes(timeout)
+	name := d.Get("name").(string)
+
+	getVolume, err := silk.GetVolumeByName(name, timeout)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -484,7 +486,9 @@ func resourceSilkVolumeImport(ctx context.Context, d *schema.ResourceData, m int
 
 	silk := m.(*silksdp.Credentials)
 
-	getVolume, err := silk.GetVolumes(timeout)
+	name := d.Get("name").(string)
+
+	getVolume, err := silk.GetVolumeByName(name, timeout)
 	if err != nil {
 		return nil, err
 	}

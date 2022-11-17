@@ -3,7 +3,7 @@ HOSTNAME=silk.us
 NAMESPACE=silk-terraform-provider
 NAME=silk
 BINARY=terraform-provider-${NAME}
-VERSION=1.2.0
+VERSION=1.2.2
 OS_ARCH=linux_amd64
 
 default: install
@@ -13,6 +13,7 @@ build:
 
 release:
 	GOOS=darwin GOARCH=amd64 go build -o ./bin/${BINARY}_${VERSION}_darwin_amd64
+	GOOS=darwin GOARCH=arm64 go build -o ./bin/${BINARY}_${VERSION}_darwin_arm64
 	GOOS=freebsd GOARCH=386 go build -o ./bin/${BINARY}_${VERSION}_freebsd_386
 	GOOS=freebsd GOARCH=amd64 go build -o ./bin/${BINARY}_${VERSION}_freebsd_amd64
 	GOOS=freebsd GOARCH=arm go build -o ./bin/${BINARY}_${VERSION}_freebsd_arm
@@ -28,8 +29,8 @@ release:
 
 
 install: build
-	mkdir -p ~/.terraform.d/plugins/localdomain/provider/silk/${VERSION}/linux_amd64
-	cp ${BINARY} ~/.terraform.d/plugins/localdomain/provider/silk/${VERSION}/linux_amd64
+	mkdir -p ~/.terraform.d/plugins/localdomain/provider/silk/${VERSION}/${OS_ARCH}
+	cp ${BINARY} ~/.terraform.d/plugins/localdomain/provider/silk/${VERSION}/${OS_ARCH}
 	mv ${BINARY} ${BINARY}_${VERSION}_${OS_ARCH}
 
 test: 

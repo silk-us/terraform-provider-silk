@@ -117,7 +117,9 @@ func resourceSilkHostRead(ctx context.Context, d *schema.ResourceData, m interfa
 
 	silk := m.(*silksdp.Credentials)
 
-	getHost, err := silk.GetHosts(timeout)
+	name := d.Get("name").(string)
+
+	getHost, err := silk.GetHostByName(name, timeout)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -349,7 +351,9 @@ func resourceSilkHostImport(ctx context.Context, d *schema.ResourceData, m inter
 
 	silk := m.(*silksdp.Credentials)
 
-	getHost, err := silk.GetHosts(timeout)
+	name := d.Get("name").(string)
+
+	getHost, err := silk.GetHostByName(name, timeout)
 	if err != nil {
 		return nil, err
 	}

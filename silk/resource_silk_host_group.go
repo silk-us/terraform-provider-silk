@@ -106,7 +106,9 @@ func resourceSilkHostGroupRead(ctx context.Context, d *schema.ResourceData, m in
 
 	silk := m.(*silksdp.Credentials)
 
-	getHostGroups, err := silk.GetHostGroups(timeout)
+	name := d.Get("name").(string)
+
+	getHostGroups, err := silk.GetHostGroupByName(name, timeout)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -256,7 +258,9 @@ func resourceSilkHostGroupImport(ctx context.Context, d *schema.ResourceData, m 
 
 	silk := m.(*silksdp.Credentials)
 
-	getHostGroups, err := silk.GetHostGroups(timeout)
+	name := d.Get("name").(string)
+
+	getHostGroups, err := silk.GetHostGroupByName(name, timeout)
 	if err != nil {
 		return nil, err
 	}
