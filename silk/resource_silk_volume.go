@@ -160,9 +160,10 @@ func resourceSilkVolumeRead(ctx context.Context, d *schema.ResourceData, m inter
 
 	silk := m.(*silksdp.Credentials)
 
-	name := d.Get("name").(string)
+	// name := d.Get("name").(string)
 
-	getVolume, err := silk.GetVolumeByName(name, timeout)
+	// getVolume, err := silk.GetVolumeByName(name, timeout)
+	getVolume, err := silk.GetVolumes(timeout)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -186,7 +187,7 @@ func resourceSilkVolumeRead(ctx context.Context, d *schema.ResourceData, m inter
 
 			for _, volumeGroup := range getVolumeGroups.Hits {
 				if volumeGroup.ID == volumeGroupRefID {
-					d.Set("volume_group_id",volumeGroupRefID)
+					d.Set("volume_group_id", volumeGroupRefID)
 					d.Set("volume_group_name", volumeGroup.Name)
 				}
 			}
@@ -308,7 +309,7 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			new = append(new, nReflect.Index(i).Interface().(string))
 		}
 
-		union := unique(append(current, new... ))
+		union := unique(append(current, new...))
 		for _, h := range union {
 			_, foundInNew := find(new, h)
 			_, foundInCurrent := find(current, h)
@@ -316,7 +317,7 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 				hostMappingToAdd = append(hostMappingToAdd, h)
 			} else if !foundInNew && foundInCurrent {
 				hostMappingToRemove = append(hostMappingToRemove, h)
-			} 
+			}
 		}
 
 		// Add each Host to the Volume
@@ -360,7 +361,7 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			new = append(new, nReflect.Index(i).Interface().(string))
 		}
 
-		union := unique(append(current, new... ))
+		union := unique(append(current, new...))
 		for _, h := range union {
 			_, foundInNew := find(new, h)
 			_, foundInCurrent := find(current, h)
@@ -368,7 +369,7 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 				hostGroupMappingToAdd = append(hostGroupMappingToAdd, h)
 			} else if !foundInNew && foundInCurrent {
 				hostGroupMappingToRemove = append(hostGroupMappingToRemove, h)
-			} 
+			}
 		}
 
 		// Map each Host Group to the Volume
@@ -399,10 +400,10 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 			return diag.FromErr(err)
 		}
 
-		cGroupID_Interface,_ := d.GetChange("volume_group_id")
+		cGroupID_Interface, _ := d.GetChange("volume_group_id")
 		cGroupID := cGroupID_Interface.(int)
 		if volumeGroupID != cGroupID {
-			d.Set("volume_group_id",volumeGroupID)
+			d.Set("volume_group_id", volumeGroupID)
 			volumeGroupConfig := map[string]interface{}{}
 			volumeGroupConfig["ref"] = fmt.Sprintf("/volume_groups/%d", volumeGroupID)
 			config["volume_group"] = volumeGroupConfig
@@ -427,7 +428,7 @@ func resourceSilkVolumeUpdate(ctx context.Context, d *schema.ResourceData, m int
 	if len(config) != 0 {
 		_, err := silk.UpdateVolume(currentVolumeName, config, timeout)
 		if err != nil {
-			d.Set("name",currentVolumeName)
+			d.Set("name", currentVolumeName)
 			return diag.FromErr(err)
 		}
 

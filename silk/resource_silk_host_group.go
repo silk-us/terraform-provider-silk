@@ -106,9 +106,10 @@ func resourceSilkHostGroupRead(ctx context.Context, d *schema.ResourceData, m in
 
 	silk := m.(*silksdp.Credentials)
 
-	name := d.Get("name").(string)
+	// name := d.Get("name").(string)
 
-	getHostGroups, err := silk.GetHostGroupByName(name, timeout)
+	// getHostGroups, err := silk.GetHostGroupByName(name, timeout)
+	getHostGroups, err := silk.GetHostGroups(timeout)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -167,7 +168,7 @@ func resourceSilkHostGroupUpdate(ctx context.Context, d *schema.ResourceData, m 
 
 		// Get the current (c) and new (n) host mappings
 		c, n := d.GetChange("host_mapping")
-		
+
 		// Use reflection to convert c and n into values that can be ranged through
 		// without crashing Terraform
 		cReflect := reflect.ValueOf(c)
@@ -186,7 +187,7 @@ func resourceSilkHostGroupUpdate(ctx context.Context, d *schema.ResourceData, m 
 		}
 
 		// Mapping Hosts
-		union := unique(append(current, new... ))
+		union := unique(append(current, new...))
 		for _, h := range union {
 			_, foundInNew := find(new, h)
 			_, foundInCurrent := find(current, h)
@@ -194,7 +195,7 @@ func resourceSilkHostGroupUpdate(ctx context.Context, d *schema.ResourceData, m 
 				hostMappingToAdd = append(hostMappingToAdd, h)
 			} else if !foundInNew && foundInCurrent {
 				hostMappingToRemove = append(hostMappingToRemove, h)
-			} 
+			}
 		}
 
 		// Add each Host to the Volume
@@ -213,7 +214,6 @@ func resourceSilkHostGroupUpdate(ctx context.Context, d *schema.ResourceData, m 
 			}
 		}
 	}
-
 
 	if d.HasChange("allow_different_host_types") {
 		config["allow_different_host_types"] = d.Get("allow_different_host_types").(bool)

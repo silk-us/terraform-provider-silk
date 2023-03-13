@@ -99,9 +99,10 @@ func resourceSilkVolumeGroupRead(ctx context.Context, d *schema.ResourceData, m 
 
 	silk := m.(*silksdp.Credentials)
 
-	name := d.Get("name").(string)
+	// name := d.Get("name").(string)
 
-	getVolumeGroup, err := silk.GetVolumeGroupByName(name, timeout)
+	// getVolumeGroup, err := silk.GetVolumeGroupByName(name, timeout)
+	getVolumeGroup, err := silk.GetVolumeGroups(timeout)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -197,7 +198,7 @@ func resourceSilkVolumeGroupUpdate(ctx context.Context, d *schema.ResourceData, 
 
 	_, err := silk.UpdateVolumeGroup(currentVolumeGroupName, config, timeout)
 	if err != nil {
-		d.Set("name",currentVolumeGroupName)
+		d.Set("name", currentVolumeGroupName)
 		return diag.FromErr(err)
 	}
 

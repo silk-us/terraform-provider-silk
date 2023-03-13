@@ -87,7 +87,7 @@ func resourceSilkHostCreate(ctx context.Context, d *schema.ResourceData, m inter
 
 	if len(pwwn) != 0 {
 		for _, p := range pwwn {
-			_, err := silk.CreateHostPWWN(name, p.(interface{}).(string),timeout)
+			_, err := silk.CreateHostPWWN(name, p.(interface{}).(string), timeout)
 			if err != nil {
 				return diag.FromErr(err)
 			} else {
@@ -97,7 +97,7 @@ func resourceSilkHostCreate(ctx context.Context, d *schema.ResourceData, m inter
 	}
 
 	if iqn != "" {
-		_, err := silk.CreateHostIQN(name, iqn,timeout)
+		_, err := silk.CreateHostIQN(name, iqn, timeout)
 		if err != nil {
 			return diag.FromErr(err)
 		} else {
@@ -117,9 +117,10 @@ func resourceSilkHostRead(ctx context.Context, d *schema.ResourceData, m interfa
 
 	silk := m.(*silksdp.Credentials)
 
-	name := d.Get("name").(string)
+	// name := d.Get("name").(string)
 
-	getHost, err := silk.GetHostByName(name, timeout)
+	// getHost, err := silk.GetHostByName(name, timeout)
+	getHost, err := silk.GetHosts(timeout)
 	if err != nil {
 		return diag.FromErr(err)
 	}
@@ -233,7 +234,7 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 			new = append(new, nReflect.Index(i).Interface().(string))
 		}
 
-		union := unique(append(current, new... ))
+		union := unique(append(current, new...))
 		for _, h := range union {
 			_, foundInNew := find(new, h)
 			_, foundInCurrent := find(current, h)
@@ -241,7 +242,7 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 				pwwnToAdd = append(pwwnToAdd, h)
 			} else if !foundInNew && foundInCurrent {
 				pwwnToAdd = append(pwwnToRemove, h)
-			} 
+			}
 		}
 
 		// Add each PWWN to the Host
@@ -266,7 +267,7 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 		c, n := d.GetChange("iqn")
 
 		if c.(string) != "" {
-		_, err := silk.DeleteHostIQN(currentHostName, timeout)
+			_, err := silk.DeleteHostIQN(currentHostName, timeout)
 			if err != nil {
 				return diag.FromErr(err)
 			}
@@ -290,7 +291,7 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 	if len(config) != 0 {
 		_, err := silk.UpdateHost(currentHostName, config, timeout)
 		if err != nil {
-			d.Set("name",currentHostName)
+			d.Set("name", currentHostName)
 			return diag.FromErr(err)
 		}
 	}
@@ -301,13 +302,12 @@ func resourceSilkHostUpdate(ctx context.Context, d *schema.ResourceData, m inter
 func resourceSilkHostDelete(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 	// Warning or errors can be collected in a slice type
 	var diags diag.Diagnostics
-	
+
 	name := d.Get("name").(string)
 	timeout := d.Get("timeout").(int)
 
 	silk := m.(*silksdp.Credentials)
 
-	
 	// host, err := silk.GetHost(name,timeout)
 	// if err != nil {
 	// 	return diag.FromErr(err)
@@ -321,12 +321,12 @@ func resourceSilkHostDelete(ctx context.Context, d *schema.ResourceData, m inter
 	// 	}
 	// 	hostGroupName, err := silk.GetHostGroupName(hostGroupID)
 	// 	if err != nil{
-	// 		return diag.Errorf("Could not find hostgroup with ID=%d",hostGroupID) 
+	// 		return diag.Errorf("Could not find hostgroup with ID=%d",hostGroupID)
 	// 	}
 	// 	_,err = silk.DeleteHostHostGroupMapping(name,hostGroupName)
 	// 	if err != nil{
-	// 		return diag.FromErr(err) 
-	// 	} 
+	// 		return diag.FromErr(err)
+	// 	}
 	// }
 
 	// _, err = silk.DeleteHostMappings(name,timeout)
@@ -334,11 +334,10 @@ func resourceSilkHostDelete(ctx context.Context, d *schema.ResourceData, m inter
 	// 	return diag.FromErr(err)
 	// }
 
-
-	_, err := silk.DeleteHost(name,timeout)
+	_, err := silk.DeleteHost(name, timeout)
 	if err != nil {
 		return diag.FromErr(err)
-	} 
+	}
 
 	d.SetId("")
 
