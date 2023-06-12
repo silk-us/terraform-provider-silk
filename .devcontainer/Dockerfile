@@ -28,33 +28,34 @@ RUN apt-get update \
 
 # Install Go tools
 ARG GO_TOOLS_WITH_MODULES="\
-    golang.org/x/tools/gopls \
-    honnef.co/go/tools/... \
-    golang.org/x/tools/cmd/gorename \
-    golang.org/x/tools/cmd/goimports \
-    golang.org/x/tools/cmd/guru \
-    golang.org/x/lint/golint \
-    github.com/mdempsky/gocode \
-    github.com/cweill/gotests/... \
-    github.com/haya14busa/goplay/cmd/goplay \
-    github.com/sqs/goreturns \
-    github.com/josharian/impl \
-    github.com/davidrjenni/reftools/cmd/fillstruct \
-    github.com/uudashr/gopkgs/v2/cmd/gopkgs \
-    github.com/ramya-rao-a/go-outline \
-    github.com/acroca/go-symbols \
-    github.com/godoctor/godoctor \
-    github.com/rogpeppe/godef \
-    github.com/zmb3/gogetdoc \
-    github.com/fatih/gomodifytags \
-    github.com/mgechev/revive \
-    github.com/go-delve/delve/cmd/dlv"
+    golang.org/x/tools/gopls@latest \
+    honnef.co/go/tools@latest \
+    golang.org/x/tools/cmd/gorename@latest \
+    golang.org/x/tools/cmd/goimports@latest \
+    golang.org/x/tools/cmd/guru@latest \
+    golang.org/x/lint/golint@latest \
+    github.com/mdempsky/gocode@latest \
+    github.com/cweill/gotests@latest \
+    github.com/haya14busa/goplay/cmd/goplay@latest \
+    github.com/sqs/goreturns@latest \
+    github.com/josharian/impl@latest \
+    github.com/davidrjenni/reftools/cmd/fillstruct@latest \
+    github.com/uudashr/gopkgs/v2/cmd/gopkgs@latest \
+    github.com/ramya-rao-a/go-outline@latest \
+    github.com/acroca/go-symbols@latest \
+    github.com/godoctor/godoctor@latest \
+    github.com/rogpeppe/godef@latest \
+    github.com/zmb3/gogetdoc@latest \
+    github.com/fatih/gomodifytags@latest \
+    github.com/mgechev/revive@latest \
+    github.com/go-delve/delve/cmd/dlv@latest"
 RUN mkdir -p /tmp/gotools \
     && cd /tmp/gotools \
     && export GOPATH=/tmp/gotools \
     # Go tools w/module support
     && export GO111MODULE=on \
-    && (echo "${GO_TOOLS_WITH_MODULES}" | xargs -n 1 go get -x )2>&1 \
+    # && (echo "${GO_TOOLS_WITH_MODULES}" | xargs -n 1 go get -x )2>&1 \
+    && for i in ${GO_TOOLS_WITH_MODULES}; do go install $i; done \
     # gocode-gomod
     && export GO111MODULE=auto \
     && go get -x -d github.com/stamblerre/gocode 2>&1 \
