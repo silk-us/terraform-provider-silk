@@ -1,0 +1,79 @@
+# GoReleaser config for publishing terraform-provider-silk to the Terraform Registry.
+# https://goreleaser.com / https://www.terraform.io/registry/providers/publishing
+#
+# Tag a release (e.g. `git tag v1.2.6 && git push origin v1.2.6`) and the GitHub
+# Actions workflow runs this. Produces the per-platform zips, SHA256SUMS, a
+# GPG-signed SHA256SUMS.sig, and the registry manifest.
+
+version: 2
+
+before:
+  hooks:
+    - go mod tidy
+
+builds:
+  - env:
+      - CGO_ENABLED=0
+    mod_timestamp: '{{ .CommitTimestamp }}'
+    flags:
+      - -trimpath
+    ldflags:
+      - '-s -w -X main.version={{.Version}} -X main.commit={{.Commit}}'
+    goos:
+      - darwin
+      - linux
+      - freebsd
+      - openbsd
+      - solaris
+      - windows
+    goarch:
+      - amd64
+      - '386'
+      - arm
+      - arm64
+    ignore:
+      # solaris only ships amd64
+      - goos: solaris
+        goarch: '386'
+      - goos: solaris
+        goarch: arm
+      - goos: solaris
+        goarch: arm64
+      # darwin has no 386 / arm (32-bit)
+      - goos: darwin
+        goarch: '386'
+      - goos: darwin
+        goarch: arm
+      # windows arm builds aren't shipped here
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+    binary: '{{ .ProjectName }}_v{{ .Version }}'
+
+archives:
+  - format: zip
+    name_template: '{{ .ProjectName }}_{{ .Version }}_{{ .Os }}_{{ .Arch }}'
+
+checksum:
+  name_template: '{{ .ProjectName }}_{{ .Version }}_SHA256SUMS'
+  algorithm: sha256
+
+signs:
+  - artifacts: checksum
+    args:
+      # GPG_FINGERPRINT is exported by the GPG import step in the workflow.
+      - "--batch"
+      - "--local-user"
+      - "{{ .Env.GPG_FINGERPRINT }}"
+      - "--output"
+      - "${signature}"
+      - "--detach-sign"
+      - "${artifact}"
+
+release:
+  # registry picks artifacts up from the GitHub release; don't mark as draft
+  draft: false
+
+changelog:
+  disable: true

@@ -1,20 +1,26 @@
-## silk_retention_policy
+---
+page_title: "silk_retention_policy Resource - terraform-provider-silk"
+description: |-
+  Manage a Retention Policy on the Silk server.
+---
 
-Manage a Retention Policy on the Silk Server.
+# silk_retention_policy (Resource)
+
+Manage a Retention Policy on the Silk server.
 
 ## Example Usage
 
-``` hcl
+```hcl
 resource "silk_retention_policy" "default" {
-    name = "Weekly Retention"
-    num_snapshots = "7"
-    weeks = "1"
-    days = "0"
-    hours = "0"
+  name          = "Weekly Retention"
+  num_snapshots = "7"
+  weeks         = "1"
+  days          = "0"
+  hours         = "0"
 }
 ```
 
-### Import 
+### Import
 
 ```
 terraform import silk_retention_policy.{instance} {object name}
@@ -34,13 +40,7 @@ The following arguments are supported:
 
 The following attributes are exported:
 
-* `days` - The number of days to retain the snapshot.
-* `hours` - The number of hours to retain the snapshot.
-* `id` - An ID unique to Terraform for this Retention Policy. The convention is `silk-RetentionPolicy-retentionPolicyID-timeString`
-* `name` - The name of the retention policy.
-* `num_snapshots` - The type of Host.
-* `weeks` - The number of weeks to retain the snapshot.
-
+* `id` - An ID unique to Terraform for this Retention Policy. The convention is `silk-RetentionPolicy-retentionPolicyID-timeString`.
 
 ## Destroy Behavior
 

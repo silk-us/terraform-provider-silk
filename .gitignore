@@ -51,3 +51,7 @@ vendor/
 terraform-provider-silk
 main.tf
 terraform-provider-silk_*
+
+# GPG signing keys - never commit these
+*.gpg
+*.rev

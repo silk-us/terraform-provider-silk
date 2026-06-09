@@ -35,6 +35,7 @@ func Provider() *schema.Provider {
 			"silk_host_group":       resourceSilkHostGroup(),
 			"silk_retention_policy": resourceSilkRetentionPolicy(),
 			"silk_capacity_policy":  resourceSilkCapacityPolicy(),
+			"silk_thin_clone":       resourceSilkThinClone(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{},
 
