@@ -55,3 +55,7 @@ terraform-provider-silk_*
 # GPG signing keys - never commit these
 *.gpg
 *.rev
+
+# internal release notes - not for the public repo
+POST_COMMIT.md
+PUBLISHING.md
