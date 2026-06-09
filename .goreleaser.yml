@@ -74,6 +74,10 @@ signs:
 release:
   # registry picks artifacts up from the GitHub release; don't mark as draft
   draft: false
+  # ship the registry protocol manifest alongside the zips
+  extra_files:
+    - glob: 'terraform-registry-manifest.json'
+      name_template: '{{ .ProjectName }}_{{ .Version }}_manifest.json'
 
 changelog:
   disable: true
