@@ -113,6 +113,40 @@ use the helper scripts:
 .\build-local.ps1            # Windows
 ```
 
+### Using a locally built provider
+
+`make install` (or `build-local.* -Install`) places the binary in Terraform's
+local plugin directory under the `localdomain/provider/silk` namespace. To
+consume that build instead of the registry, point the `source` at that local
+namespace:
+
+```hcl
+terraform {
+  required_providers {
+    silk = {
+      source  = "localdomain/provider/silk"
+      version = "1.2.6"
+    }
+  }
+}
+
+provider "silk" {}
+```
+
+The plugin path the install step writes to:
+
+```
+# macOS / Linux
+~/.terraform.d/plugins/localdomain/provider/silk/<version>/<os>_<arch>/
+
+# Windows
+%APPDATA%\terraform.d\plugins\localdomain\provider\silk\<version>\<os>_<arch>\
+```
+
+Run `terraform init` in the directory containing your `.tf` files and Terraform
+will pick up the local build. This is for development/testing — for normal use,
+install from the registry as shown above.
+
 ## Releasing
 
 Maintainer release process (tag a `vX.Y.Z` and the registry auto-publishes) is
