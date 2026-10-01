@@ -99,7 +99,44 @@ func resourceSilkCapacityPolicyCreate(ctx context.Context, d *schema.ResourceDat
 	return resourceSilkCapacityPolicyRead(ctx, d, m)
 }
 
-// resourceSilkCapacityPolicyRead Reads the decllared capacity policy
+// pre v1.2.7, full pull + client side filter. kept for reference
+// // resourceSilkCapacityPolicyRead Reads the decllared capacity policy
+// func resourceSilkCapacityPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+//
+// 	// Warning or errors can be collected in a slice type
+// 	var diags diag.Diagnostics
+//
+// 	timeout := d.Get("timeout").(int)
+//
+// 	silk := m.(*silksdp.Credentials)
+//
+// 	getCapacityPolicy, err := silk.GetCapacityPolicy(timeout)
+// 	if err != nil {
+// 		return diag.FromErr(err)
+// 	}
+//
+// 	for _, CapacityPolicy := range getCapacityPolicy.Hits {
+// 		if CapacityPolicy.Name == d.Get("name").(string) {
+//
+// 			d.Set("name", CapacityPolicy.Name)
+// 			d.Set("obj_id", CapacityPolicy.ID)
+// 			d.Set("warningthreshold", CapacityPolicy.WarningThreshold)
+// 			d.Set("errorthreshold", CapacityPolicy.ErrorThreshold)
+// 			d.Set("criticalthreshold", CapacityPolicy.CriticalThreshold)
+// 			d.Set("fullthreshold", CapacityPolicy.FullThreshold)
+// 			d.Set("snapshotoverheadthreshold", CapacityPolicy.SnapshotOverheadThreshold)
+//
+// 			// Stop the loop and return a nil err
+// 			return diags
+// 		}
+// 	}
+// 	// Retention Policy was not found on the server
+// 	d.SetId("")
+//
+// 	return diags
+//
+// }
+
 func resourceSilkCapacityPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	// Warning or errors can be collected in a slice type
@@ -109,27 +146,33 @@ func resourceSilkCapacityPolicyRead(ctx context.Context, d *schema.ResourceData,
 
 	silk := m.(*silksdp.Credentials)
 
-	getCapacityPolicy, err := silk.GetCapacityPolicy(timeout)
+	var getCapacityPolicy *silksdp.GetCapacityPolicyResponse
+	var err error
+	if id := objID(d); id != 0 {
+		getCapacityPolicy, err = silk.GetCapacityPolicyByID(id, timeout)
+	} else {
+		getCapacityPolicy, err = silk.GetCapacityPolicyByName(d.Get("name").(string), timeout)
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	for _, CapacityPolicy := range getCapacityPolicy.Hits {
-		if CapacityPolicy.Name == d.Get("name").(string) {
-
-			d.Set("name", CapacityPolicy.Name)
-			d.Set("obj_id", CapacityPolicy.ID)
-			d.Set("warningthreshold", CapacityPolicy.WarningThreshold)
-			d.Set("errorthreshold", CapacityPolicy.ErrorThreshold)
-			d.Set("criticalthreshold", CapacityPolicy.CriticalThreshold)
-			d.Set("fullthreshold", CapacityPolicy.FullThreshold)
-			d.Set("snapshotoverheadthreshold", CapacityPolicy.SnapshotOverheadThreshold)
-
-			// Stop the loop and return a nil err
-			return diags
+		if CapacityPolicy.ID != objID(d) && CapacityPolicy.Name != d.Get("name").(string) {
+			continue
 		}
+
+		d.Set("name", CapacityPolicy.Name)
+		d.Set("obj_id", CapacityPolicy.ID)
+		d.Set("warningthreshold", CapacityPolicy.WarningThreshold)
+		d.Set("errorthreshold", CapacityPolicy.ErrorThreshold)
+		d.Set("criticalthreshold", CapacityPolicy.CriticalThreshold)
+		d.Set("fullthreshold", CapacityPolicy.FullThreshold)
+		d.Set("snapshotoverheadthreshold", CapacityPolicy.SnapshotOverheadThreshold)
+
+		return diags
 	}
-	// Retention Policy was not found on the server
+	// Capacity Policy was not found on the server
 	d.SetId("")
 
 	return diags
@@ -209,7 +252,7 @@ func resourceSilkCapacityPolicyImport(ctx context.Context, d *schema.ResourceDat
 
 	silk := m.(*silksdp.Credentials)
 
-	getCapacityPolicy, err := silk.GetCapacityPolicy(timeout)
+	getCapacityPolicy, err := silk.GetCapacityPolicyByName(d.Id(), timeout)
 	if err != nil {
 		return nil, err
 	}

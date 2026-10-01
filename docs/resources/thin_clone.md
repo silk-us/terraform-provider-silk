@@ -14,12 +14,31 @@ Manage a Thin Clone on the Silk server. A Thin Clone is a writable Volume that i
 resource "silk_thin_clone" "Silk-Thin-Clone" {
   name                 = "ExampleThinCloneName"
   volume_group_name    = "ExampleVolumeGroupName"
-  source_snapshot_name = "ExampleVolumeGroupSnapshotName"
+  source_snapshot_name = "ExampleSnapshotName"
   source_volume_name   = "ExampleSourceVolumeName"
   description          = "Created through Terraform"
   read_only            = false
   host_mapping         = ["ExampleHostName"]
   host_group_mapping   = ["ExampleHostGroupName"]
+  allow_destroy        = true
+}
+```
+
+Cloning from a snapshot managed in the same configuration:
+
+```hcl
+resource "silk_volume_group_snapshot" "example" {
+  name              = "snap01"
+  volume_group_name = silk_volume_group.example.name
+  retention_policy  = silk_retention_policy.example.name
+  depends_on        = [silk_volume.example]
+}
+
+resource "silk_thin_clone" "example" {
+  name                 = "ExampleThinCloneName"
+  volume_group_name    = silk_volume_group.example.name
+  source_snapshot_name = silk_volume_group_snapshot.example.name
+  source_volume_name   = silk_volume.example.name
   allow_destroy        = true
 }
 ```
@@ -36,7 +55,7 @@ The following arguments are supported:
 
 * `name` - (Required) The name of the Thin Clone.
 * `volume_group_name` - (Required) The name of the Volume Group the Thin Clone is created in. The Volume Group must contain the source Volume.
-* `source_snapshot_name` - (Required) The name of the Volume Group Snapshot to clone from. Changing this value forces a new Thin Clone to be created.
+* `source_snapshot_name` - (Required) The Volume Group Snapshot to clone from. Accepts the short snapshot name or the full `{volume group name}:{snapshot name}`. The snapshot is looked up inside `volume_group_name`. Changing this value forces a new Thin Clone to be created.
 * `source_volume_name` - (Required) The name of the source Volume within the snapshot to clone. Changing this value forces a new Thin Clone to be created.
 * `description` - (Optional) A description of the Thin Clone. If omitted, the Silk server populates this with `Clone of volume <name>`.
 * `read_only` - (Optional) This value corresponds to the 'Exposure Type' radio button in the UI and specifies whether the Thin Clone should be 'Read/Write' or 'Read Only'. Default is false.

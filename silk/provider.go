@@ -29,13 +29,15 @@ func Provider() *schema.Provider {
 		},
 
 		ResourcesMap: map[string]*schema.Resource{
-			"silk_volume":           resourceSilkVolume(),
-			"silk_volume_group":     resourceSilkVolumeGroup(),
-			"silk_host":             resourceSilkHost(),
-			"silk_host_group":       resourceSilkHostGroup(),
-			"silk_retention_policy": resourceSilkRetentionPolicy(),
-			"silk_capacity_policy":  resourceSilkCapacityPolicy(),
-			"silk_thin_clone":       resourceSilkThinClone(),
+			"silk_volume":                resourceSilkVolume(),
+			"silk_volume_group":          resourceSilkVolumeGroup(),
+			"silk_host":                  resourceSilkHost(),
+			"silk_host_group":            resourceSilkHostGroup(),
+			"silk_retention_policy":      resourceSilkRetentionPolicy(),
+			"silk_capacity_policy":       resourceSilkCapacityPolicy(),
+			"silk_thin_clone":            resourceSilkThinClone(),
+			"silk_volume_group_snapshot": resourceSilkVolumeGroupSnapshot(),
+			"silk_volume_group_view":     resourceSilkVolumeGroupView(),
 		},
 		DataSourcesMap: map[string]*schema.Resource{},
 

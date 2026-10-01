@@ -34,7 +34,7 @@ The following arguments are supported:
 * `warningthreshold` - (Required) Percentage of used capacity required to trigger a 'warning'.
 * `errorthreshold` - (Required) Percentage of used capacity required to trigger an 'error'.
 * `criticalthreshold` - (Required) Percentage of used capacity required to trigger a 'critical' alert.
-* `snapshotoverheadthreshold` - (Optional) Percentage of capacity used by snapshots to generate an alert.
+* `snapshotoverheadthreshold` - (Optional) Percentage of capacity used by snapshots to generate an alert. Set this to a value from 1 to 97. If it is omitted, `0` is sent, and the Silk server rejects `0`.
 
 ## Attribute Reference
 

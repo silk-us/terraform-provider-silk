@@ -33,8 +33,11 @@ fi
 SDK_DIR="$(cd "$SDK_DIR" && pwd)"
 
 # Pull VERSION/BINARY from the Makefile so we don't drift.
-VERSION="$(awk -F= '/^VERSION/ {gsub(/ /,"",$2); print $2; exit}' "$PROVIDER_DIR/Makefile")"
-BINARY="$(awk -F= '/^BINARY/ {gsub(/ /,"",$2); print $2; exit}' "$PROVIDER_DIR/Makefile" | sed 's/\${NAME}/silk/')"
+# VERSION="$(awk -F= '/^VERSION/ {gsub(/ /,"",$2); print $2; exit}' "$PROVIDER_DIR/Makefile")"
+# Makefile is CRLF, strip the \r too or it ends up in the install path
+VERSION="$(awk -F= '/^VERSION/ {gsub(/[ \r]/,"",$2); print $2; exit}' "$PROVIDER_DIR/Makefile")"
+# BINARY="$(awk -F= '/^BINARY/ {gsub(/ /,"",$2); print $2; exit}' "$PROVIDER_DIR/Makefile" | sed 's/\${NAME}/silk/')"
+BINARY="$(awk -F= '/^BINARY/ {gsub(/[ \r]/,"",$2); print $2; exit}' "$PROVIDER_DIR/Makefile" | sed 's/\${NAME}/silk/')"
 
 cd "$PROVIDER_DIR"
 mkdir -p ./bin

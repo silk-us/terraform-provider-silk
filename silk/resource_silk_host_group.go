@@ -97,6 +97,61 @@ func resourceSilkHostGroupCreate(ctx context.Context, d *schema.ResourceData, m 
 	return resourceSilkHostGroupRead(ctx, d, m)
 }
 
+// pre v1.2.7, full pull + client side filter. kept for reference
+// func resourceSilkHostGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+//
+// 	// Warning or errors can be collected in a slice type
+// 	var diags diag.Diagnostics
+//
+// 	timeout := d.Get("timeout").(int)
+//
+// 	silk := m.(*silksdp.Credentials)
+//
+// 	// name := d.Get("name").(string)
+//
+// 	// getHostGroups, err := silk.GetHostGroupByName(name, timeout)
+// 	getHostGroups, err := silk.GetHostGroups(timeout)
+// 	if err != nil {
+// 		return diag.FromErr(err)
+// 	}
+//
+// 	for _, hostGroup := range getHostGroups.Hits {
+// 		if hostGroup.Name == d.Get("name").(string) {
+//
+// 			if len(d.Get("host_mapping").([]interface{})) != 0 {
+//
+// 				// Get the hosts in the host group and then set the TF host_mapping value with
+// 				// those responses
+// 				hostsInHostGroup, err := silk.GetHostGroupHosts(d.Get("name").(string))
+// 				if err != nil {
+// 					return diag.FromErr(err)
+// 				}
+//
+// 				// Sort the new slice to prevent any TF comparison issues
+// 				sort.Slice(hostsInHostGroup, func(i, j int) bool {
+// 					return hostsInHostGroup[i] < hostsInHostGroup[j]
+// 				})
+//
+// 				d.Set("host_mapping", hostsInHostGroup)
+//
+// 			}
+//
+// 			d.Set("name", hostGroup.Name)
+// 			d.Set("description", hostGroup.Description)
+// 			d.Set("allow_different_host_types", hostGroup.AllowDifferentHostTypes)
+// 			d.Set("obj_id", hostGroup.ID)
+//
+// 			// Stop the loop and return a nil err
+// 			return diags
+// 		}
+// 	}
+// 	// Volume was not found on the server
+// 	d.SetId("")
+//
+// 	return diags
+//
+// }
+
 func resourceSilkHostGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	// Warning or errors can be collected in a slice type
@@ -106,49 +161,43 @@ func resourceSilkHostGroupRead(ctx context.Context, d *schema.ResourceData, m in
 
 	silk := m.(*silksdp.Credentials)
 
-	// name := d.Get("name").(string)
-
-	// getHostGroups, err := silk.GetHostGroupByName(name, timeout)
-	getHostGroups, err := silk.GetHostGroups(timeout)
+	var getHostGroups *silksdp.GetHostGroupsResponse
+	var err error
+	if id := objID(d); id != 0 {
+		getHostGroups, err = silk.GetHostGroupByID(id, timeout)
+	} else {
+		getHostGroups, err = silk.GetHostGroupByName(d.Get("name").(string), timeout)
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	for _, hostGroup := range getHostGroups.Hits {
-		if hostGroup.Name == d.Get("name").(string) {
-
-			if len(d.Get("host_mapping").([]interface{})) != 0 {
-
-				// Get the hosts in the host group and then set the TF host_mapping value with
-				// those responses
-				hostsInHostGroup, err := silk.GetHostGroupHosts(d.Get("name").(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
-
-				// Sort the new slice to prevent any TF comparison issues
-				sort.Slice(hostsInHostGroup, func(i, j int) bool {
-					return hostsInHostGroup[i] < hostsInHostGroup[j]
-				})
-
-				d.Set("host_mapping", hostsInHostGroup)
-
-			}
-
-			d.Set("name", hostGroup.Name)
-			d.Set("description", hostGroup.Description)
-			d.Set("allow_different_host_types", hostGroup.AllowDifferentHostTypes)
-			d.Set("obj_id", hostGroup.ID)
-
-			// Stop the loop and return a nil err
-			return diags
+		if hostGroup.ID != objID(d) && hostGroup.Name != d.Get("name").(string) {
+			continue
 		}
+
+		if len(d.Get("host_mapping").([]interface{})) != 0 {
+			hostsInHostGroup, err := silk.GetHostGroupHostsByID(hostGroup.ID, timeout)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			// Sort the new slice to prevent any TF comparison issues
+			sort.Strings(hostsInHostGroup)
+			d.Set("host_mapping", hostsInHostGroup)
+		}
+
+		d.Set("name", hostGroup.Name)
+		d.Set("description", hostGroup.Description)
+		d.Set("allow_different_host_types", hostGroup.AllowDifferentHostTypes)
+		d.Set("obj_id", hostGroup.ID)
+
+		return diags
 	}
-	// Volume was not found on the server
+	// Host Group was not found on the server
 	d.SetId("")
 
 	return diags
-
 }
 
 func resourceSilkHostGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -258,7 +307,9 @@ func resourceSilkHostGroupImport(ctx context.Context, d *schema.ResourceData, m 
 
 	silk := m.(*silksdp.Credentials)
 
-	name := d.Get("name").(string)
+	// name := d.Get("name").(string)
+	// name is empty during import, only the id is set
+	name := d.Id()
 
 	getHostGroups, err := silk.GetHostGroupByName(name, timeout)
 	if err != nil {

@@ -59,3 +59,6 @@ terraform-provider-silk_*
 # internal release notes - not for the public repo
 POST_COMMIT.md
 PUBLISHING.md
+
+# local crud test, has the lab array creds in it
+

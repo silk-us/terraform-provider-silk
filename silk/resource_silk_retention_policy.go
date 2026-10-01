@@ -86,6 +86,41 @@ func resourceSilkRetentionPolicyCreate(ctx context.Context, d *schema.ResourceDa
 	return resourceSilkRetentionPolicyRead(ctx, d, m)
 }
 
+// pre v1.2.7, full pull + client side filter. kept for reference
+// func resourceSilkRetentionPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+//
+// 	// Warning or errors can be collected in a slice type
+// 	var diags diag.Diagnostics
+//
+// 	timeout := d.Get("timeout").(int)
+//
+// 	silk := m.(*silksdp.Credentials)
+//
+// 	getRetentionPolicy, err := silk.GetRetentionPolicy(timeout)
+// 	if err != nil {
+// 		return diag.FromErr(err)
+// 	}
+//
+// 	for _, RetentionPolicy := range getRetentionPolicy.Hits {
+// 		if RetentionPolicy.Name == d.Get("name").(string) {
+//
+// 			d.Set("name", RetentionPolicy.Name)
+// 			d.Set("num_snapshots", RetentionPolicy.NumSnapshots)
+// 			d.Set("weeks", RetentionPolicy.Weeks)
+// 			d.Set("days", RetentionPolicy.Days)
+// 			d.Set("hours", RetentionPolicy.Hours)
+//
+// 			// Stop the loop and return a nil err
+// 			return diags
+// 		}
+// 	}
+// 	// Retention Policy was not found on the server
+// 	d.SetId("")
+//
+// 	return diags
+//
+// }
+
 func resourceSilkRetentionPolicyRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	// Warning or errors can be collected in a slice type
@@ -95,23 +130,30 @@ func resourceSilkRetentionPolicyRead(ctx context.Context, d *schema.ResourceData
 
 	silk := m.(*silksdp.Credentials)
 
-	getRetentionPolicy, err := silk.GetRetentionPolicy(timeout)
+	var getRetentionPolicy *silksdp.GetRetentionPolicyResponse
+	var err error
+	if id := objID(d); id != 0 {
+		getRetentionPolicy, err = silk.GetRetentionPolicyByID(id, timeout)
+	} else {
+		getRetentionPolicy, err = silk.GetRetentionPolicyByName(d.Get("name").(string), timeout)
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	for _, RetentionPolicy := range getRetentionPolicy.Hits {
-		if RetentionPolicy.Name == d.Get("name").(string) {
-
-			d.Set("name", RetentionPolicy.Name)
-			d.Set("num_snapshots", RetentionPolicy.NumSnapshots)
-			d.Set("weeks", RetentionPolicy.Weeks)
-			d.Set("days", RetentionPolicy.Days)
-			d.Set("hours", RetentionPolicy.Hours)
-
-			// Stop the loop and return a nil err
-			return diags
+		if RetentionPolicy.ID != objID(d) && RetentionPolicy.Name != d.Get("name").(string) {
+			continue
 		}
+
+		d.Set("name", RetentionPolicy.Name)
+		d.Set("obj_id", RetentionPolicy.ID)
+		d.Set("num_snapshots", RetentionPolicy.NumSnapshots)
+		d.Set("weeks", RetentionPolicy.Weeks)
+		d.Set("days", RetentionPolicy.Days)
+		d.Set("hours", RetentionPolicy.Hours)
+
+		return diags
 	}
 	// Retention Policy was not found on the server
 	d.SetId("")
@@ -186,7 +228,7 @@ func resourceSilkRetentionPolicyImport(ctx context.Context, d *schema.ResourceDa
 
 	silk := m.(*silksdp.Credentials)
 
-	getRetentionPolicy, err := silk.GetRetentionPolicy(timeout)
+	getRetentionPolicy, err := silk.GetRetentionPolicyByName(d.Id(), timeout)
 	if err != nil {
 		return nil, err
 	}

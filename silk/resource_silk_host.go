@@ -108,6 +108,92 @@ func resourceSilkHostCreate(ctx context.Context, d *schema.ResourceData, m inter
 	return resourceSilkHostRead(ctx, d, m)
 }
 
+// pre v1.2.7, full pull + client side filter. kept for reference
+// func resourceSilkHostRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+//
+// 	// Warning or errors can be collected in a slice type
+// 	var diags diag.Diagnostics
+//
+// 	timeout := d.Get("timeout").(int)
+//
+// 	silk := m.(*silksdp.Credentials)
+//
+// 	// name := d.Get("name").(string)
+//
+// 	// getHost, err := silk.GetHostByName(name, timeout)
+// 	getHost, err := silk.GetHosts(timeout)
+// 	if err != nil {
+// 		return diag.FromErr(err)
+// 	}
+//
+// 	// Gimme an id as an int <-- this breaks creation...
+// 	// hostID, err := strconv.Atoi(d.Id())
+// 	// if err != nil {
+// 	// 	return diag.FromErr(err)
+// 	// }
+//
+// 	for _, host := range getHost.Hits {
+// 		if (d.Get("obj_id") != nil && host.ID == d.Get("obj_id").(int)) || (d.Get("obj_id") == nil && host.Name == d.Get("name").(string)) {
+//
+// 			d.Set("name", host.Name)
+// 			d.Set("host_type", host.Type)
+// 			d.Set("obj_id", host.ID)
+//
+// 			if len(d.Get("pwwn").([]interface{})) != 0 {
+//
+// 				// Get the current PWWNs on the host and then set the TF pwwn value with
+// 				// those responses
+// 				pwwns := []string{}
+// 				getPwwn, err := silk.GetHostPWWN(d.Get("name").(string))
+// 				if err != nil {
+// 					return diag.FromErr(err)
+// 				}
+// 				for _, value := range getPwwn {
+// 					pwwns = append(pwwns, value.Pwwn)
+// 				}
+//
+// 				// Sort the new slice to prevent any TF comparison issues
+// 				sort.Slice(pwwns, func(i, j int) bool {
+// 					return pwwns[i] < pwwns[j]
+// 				})
+//
+// 				d.Set("pwwn", pwwns)
+//
+// 			}
+//
+// 			if d.Get("iqn").(string) != "" {
+//
+// 				// Get the current IQNs on the host and then set the TF IQN value with
+// 				// those responses
+// 				iqns := []string{}
+// 				getIQN, err := silk.GetHostIQN(d.Get("name").(string))
+// 				if err != nil {
+// 					return diag.FromErr(err)
+// 				}
+// 				for _, value := range getIQN {
+// 					iqns = append(iqns, value.Iqn)
+// 				}
+//
+// 				if len(iqns) == 0 {
+// 					d.Set("iqn", "")
+//
+// 				} else {
+// 					d.Set("iqn", iqns[0])
+// 				}
+//
+// 			}
+//
+// 			// Stop the loop and return a nil err
+// 			return diags
+// 		}
+// 	}
+// 	// Volume was not found on the server
+// 	d.SetId("")
+//
+// 	return diags
+//
+// }
+
 func resourceSilkHostRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	// Warning or errors can be collected in a slice type
@@ -117,76 +203,55 @@ func resourceSilkHostRead(ctx context.Context, d *schema.ResourceData, m interfa
 
 	silk := m.(*silksdp.Credentials)
 
-	// name := d.Get("name").(string)
-
-	// getHost, err := silk.GetHostByName(name, timeout)
-	getHost, err := silk.GetHosts(timeout)
+	var getHost *silksdp.GetHostsResponse
+	var err error
+	if id := objID(d); id != 0 {
+		getHost, err = silk.GetHostByID(id, timeout)
+	} else {
+		getHost, err = silk.GetHostByName(d.Get("name").(string), timeout)
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
-	// Gimme an id as an int <-- this breaks creation...
-	// hostID, err := strconv.Atoi(d.Id())
-	// if err != nil {
-	// 	return diag.FromErr(err)
-	// }
-
 	for _, host := range getHost.Hits {
-		if (d.Get("obj_id") != nil && host.ID == d.Get("obj_id").(int)) || (d.Get("obj_id") == nil && host.Name == d.Get("name").(string)) {
-
-			d.Set("name", host.Name)
-			d.Set("host_type", host.Type)
-			d.Set("obj_id", host.ID)
-
-			if len(d.Get("pwwn").([]interface{})) != 0 {
-
-				// Get the current PWWNs on the host and then set the TF pwwn value with
-				// those responses
-				pwwns := []string{}
-				getPwwn, err := silk.GetHostPWWN(d.Get("name").(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
-				for _, value := range getPwwn {
-					pwwns = append(pwwns, value.Pwwn)
-				}
-
-				// Sort the new slice to prevent any TF comparison issues
-				sort.Slice(pwwns, func(i, j int) bool {
-					return pwwns[i] < pwwns[j]
-				})
-
-				d.Set("pwwn", pwwns)
-
-			}
-
-			if d.Get("iqn").(string) != "" {
-
-				// Get the current IQNs on the host and then set the TF IQN value with
-				// those responses
-				iqns := []string{}
-				getIQN, err := silk.GetHostIQN(d.Get("name").(string))
-				if err != nil {
-					return diag.FromErr(err)
-				}
-				for _, value := range getIQN {
-					iqns = append(iqns, value.Iqn)
-				}
-
-				if len(iqns) == 0 {
-					d.Set("iqn", "")
-
-				} else {
-					d.Set("iqn", iqns[0])
-				}
-
-			}
-
-			// Stop the loop and return a nil err
-			return diags
+		if host.ID != objID(d) && host.Name != d.Get("name").(string) {
+			continue
 		}
+
+		d.Set("name", host.Name)
+		d.Set("host_type", host.Type)
+		d.Set("obj_id", host.ID)
+
+		if len(d.Get("pwwn").([]interface{})) != 0 {
+			pwwns := []string{}
+			getPwwn, err := silk.GetHostPWWNByID(host.ID, timeout)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			for _, value := range getPwwn {
+				pwwns = append(pwwns, value.Pwwn)
+			}
+			// Sort the new slice to prevent any TF comparison issues
+			sort.Strings(pwwns)
+			d.Set("pwwn", pwwns)
+		}
+
+		if d.Get("iqn").(string) != "" {
+			getIQN, err := silk.GetHostIQNByID(host.ID, timeout)
+			if err != nil {
+				return diag.FromErr(err)
+			}
+			if len(getIQN) == 0 {
+				d.Set("iqn", "")
+			} else {
+				d.Set("iqn", getIQN[0].Iqn)
+			}
+		}
+
+		return diags
 	}
-	// Volume was not found on the server
+	// Host was not found on the server
 	d.SetId("")
 
 	return diags
@@ -350,7 +415,9 @@ func resourceSilkHostImport(ctx context.Context, d *schema.ResourceData, m inter
 
 	silk := m.(*silksdp.Credentials)
 
-	name := d.Get("name").(string)
+	// name := d.Get("name").(string)
+	// name is empty during import, only the id is set
+	name := d.Id()
 
 	getHost, err := silk.GetHostByName(name, timeout)
 	if err != nil {

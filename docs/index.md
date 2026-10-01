@@ -30,6 +30,11 @@ resource "silk_volume_group" "Silk-Volume-Group" {
 }
 ```
 
+## Notes
+
+* Object names on the Silk server are limited to 32 characters.
+* Resources track their object by its SDP ID (`obj_id`). If an object is renamed outside of Terraform, the next plan renames it back instead of treating it as deleted. For resources where the name forces a replacement, such as Capacity Policies, the next plan replaces the object instead.
+
 ## Authentication
 
 The Silk provider offers a flexible means of providing credentials for

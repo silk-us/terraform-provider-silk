@@ -90,6 +90,78 @@ func resourceSilkVolumeGroupCreate(ctx context.Context, d *schema.ResourceData, 
 	return resourceSilkVolumeGroupRead(ctx, d, m)
 }
 
+// pre v1.2.7, full pull + client side filter. kept for reference
+// func resourceSilkVolumeGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
+//
+// 	// Warning or errors can be collected in a slice type
+// 	var diags diag.Diagnostics
+//
+// 	timeout := d.Get("timeout").(int)
+//
+// 	silk := m.(*silksdp.Credentials)
+//
+// 	// name := d.Get("name").(string)
+//
+// 	// getVolumeGroup, err := silk.GetVolumeGroupByName(name, timeout)
+// 	getVolumeGroup, err := silk.GetVolumeGroups(timeout)
+// 	if err != nil {
+// 		return diag.FromErr(err)
+// 	}
+//
+// 	for _, volumeGroup := range getVolumeGroup.Hits {
+// 		if volumeGroup.Name == d.Get("name").(string) {
+//
+// 			// If the Volume Group has a capacity policy, parse the output for the capacity ID and then convert that to the
+// 			// policy name
+// 			if volumeGroup.CapacityPolicy != nil {
+// 				capacityPolicy := volumeGroup.CapacityPolicy.(map[string]interface{})
+// 				for _, value := range capacityPolicy {
+// 					capacityPolicyID, _ := strconv.Atoi(strings.Replace(value.(string), "/vg_capacity_policies/", "", 1))
+// 					// If an err is returned, we can assume the capacity policy is not present
+// 					if err != nil {
+// 						d.Set("capacity_policy", "")
+//
+// 					}
+//
+// 					capacityPolicyName, err := silk.GetCapacityPolicyName(capacityPolicyID, timeout)
+// 					if err != nil {
+// 						if strings.Contains(err.Error(), "The server does not contain") == true {
+// 							d.Set("capacity_policy", "")
+// 						}
+// 						return diag.FromErr(err)
+// 					}
+//
+// 					d.Set("capacity_policy", capacityPolicyName)
+// 				}
+// 			}
+//
+// 			d.Set("name", volumeGroup.Name)
+// 			d.Set("obj_id", volumeGroup.ID)
+//
+// 			// When the Volume Group is set to an unlimated quota
+// 			// the API will return a nil interface which causes
+// 			// an error to be thrown when trying to convert from
+// 			//  the usual float64
+// 			if fmt.Sprintf("%T", volumeGroup.Quota) == "float64" {
+// 				d.Set("quota_in_gb", volumeGroup.Quota.(float64)/1024/1024)
+// 			} else {
+// 				d.Set("quota_in_gb", 0)
+// 			}
+//
+// 			d.Set("enable_deduplication", volumeGroup.IsDedup)
+// 			d.Set("description", volumeGroup.Description)
+//
+// 			// Stop the loop and return a nil err
+// 			return diags
+// 		}
+// 	}
+// 	// Volume Group was not found on the server
+// 	d.SetId("")
+//
+// 	return diags
+//
+// }
+
 func resourceSilkVolumeGroupRead(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
 
 	// Warning or errors can be collected in a slice type
@@ -99,66 +171,68 @@ func resourceSilkVolumeGroupRead(ctx context.Context, d *schema.ResourceData, m 
 
 	silk := m.(*silksdp.Credentials)
 
-	// name := d.Get("name").(string)
-
-	// getVolumeGroup, err := silk.GetVolumeGroupByName(name, timeout)
-	getVolumeGroup, err := silk.GetVolumeGroups(timeout)
+	var getVolumeGroup *silksdp.GetVolumeGroupsResponse
+	var err error
+	if id := objID(d); id != 0 {
+		getVolumeGroup, err = silk.GetVolumeGroupByID(id, timeout)
+	} else {
+		getVolumeGroup, err = silk.GetVolumeGroupByName(d.Get("name").(string), timeout)
+	}
 	if err != nil {
 		return diag.FromErr(err)
 	}
 
 	for _, volumeGroup := range getVolumeGroup.Hits {
-		if volumeGroup.Name == d.Get("name").(string) {
-
-			// If the Volume Group has a capacity policy, parse the output for the capacity ID and then convert that to the
-			// policy name
-			if volumeGroup.CapacityPolicy != nil {
-				capacityPolicy := volumeGroup.CapacityPolicy.(map[string]interface{})
-				for _, value := range capacityPolicy {
-					capacityPolicyID, _ := strconv.Atoi(strings.Replace(value.(string), "/vg_capacity_policies/", "", 1))
-					// If an err is returned, we can assume the capacity policy is not present
-					if err != nil {
-						d.Set("capacity_policy", "")
-
-					}
-
-					capacityPolicyName, err := silk.GetCapacityPolicyName(capacityPolicyID, timeout)
-					if err != nil {
-						if strings.Contains(err.Error(), "The server does not contain") == true {
-							d.Set("capacity_policy", "")
-						}
-						return diag.FromErr(err)
-					}
-
-					d.Set("capacity_policy", capacityPolicyName)
-				}
-			}
-
-			d.Set("name", volumeGroup.Name)
-			d.Set("obj_id", volumeGroup.ID)
-
-			// When the Volume Group is set to an unlimated quota
-			// the API will return a nil interface which causes
-			// an error to be thrown when trying to convert from
-			//  the usual float64
-			if fmt.Sprintf("%T", volumeGroup.Quota) == "float64" {
-				d.Set("quota_in_gb", volumeGroup.Quota.(float64)/1024/1024)
-			} else {
-				d.Set("quota_in_gb", 0)
-			}
-
-			d.Set("enable_deduplication", volumeGroup.IsDedup)
-			d.Set("description", volumeGroup.Description)
-
-			// Stop the loop and return a nil err
-			return diags
+		if volumeGroup.ID != objID(d) && volumeGroup.Name != d.Get("name").(string) {
+			continue
 		}
+
+		// If the Volume Group has a capacity policy, parse the output for the capacity ID and then convert that to the
+		// policy name
+		if volumeGroup.CapacityPolicy != nil {
+			capacityPolicy := volumeGroup.CapacityPolicy.(map[string]interface{})
+			for _, value := range capacityPolicy {
+				// was checking the wrong err here before
+				capacityPolicyID, err := strconv.Atoi(strings.Replace(value.(string), "/vg_capacity_policies/", "", 1))
+				if err != nil {
+					d.Set("capacity_policy", "")
+					continue
+				}
+
+				capacityPolicyName, err := silk.GetCapacityPolicyName(capacityPolicyID, timeout)
+				if err != nil {
+					if strings.Contains(err.Error(), "The server does not contain") == true {
+						d.Set("capacity_policy", "")
+					}
+					return diag.FromErr(err)
+				}
+
+				d.Set("capacity_policy", capacityPolicyName)
+			}
+		}
+
+		d.Set("name", volumeGroup.Name)
+		d.Set("obj_id", volumeGroup.ID)
+
+		// When the Volume Group is set to an unlimated quota
+		// the API will return a nil interface which causes
+		// an error to be thrown when trying to convert from
+		//  the usual float64
+		if fmt.Sprintf("%T", volumeGroup.Quota) == "float64" {
+			d.Set("quota_in_gb", volumeGroup.Quota.(float64)/1024/1024)
+		} else {
+			d.Set("quota_in_gb", 0)
+		}
+
+		d.Set("enable_deduplication", volumeGroup.IsDedup)
+		d.Set("description", volumeGroup.Description)
+
+		return diags
 	}
 	// Volume Group was not found on the server
 	d.SetId("")
 
 	return diags
-
 }
 
 func resourceSilkVolumeGroupUpdate(ctx context.Context, d *schema.ResourceData, m interface{}) diag.Diagnostics {
@@ -228,7 +302,9 @@ func resourceSilkVolumeGroupImport(ctx context.Context, d *schema.ResourceData, 
 
 	silk := m.(*silksdp.Credentials)
 
-	name := d.Get("name").(string)
+	// name := d.Get("name").(string)
+	// name is empty during import, only the id is set
+	name := d.Id()
 
 	getVolumeGroup, err := silk.GetVolumeGroupByName(name, timeout)
 	if err != nil {

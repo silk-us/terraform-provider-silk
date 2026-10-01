@@ -93,6 +93,8 @@ Full provider and resource documentation:
 * [silk_retention_policy](docs/resources/retention_policy.md)
 * [silk_capacity_policy](docs/resources/capacity_policy.md)
 * [silk_thin_clone](docs/resources/thin_clone.md)
+* [silk_volume_group_snapshot](docs/resources/volume_group_snapshot.md)
+* [silk_volume_group_view](docs/resources/volume_group_view.md)
 
 ## Building locally
 
@@ -125,7 +127,7 @@ terraform {
   required_providers {
     silk = {
       source  = "localdomain/provider/silk"
-      version = "1.2.6"
+      version = "1.2.7"
     }
   }
 }
