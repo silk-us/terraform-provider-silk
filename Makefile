@@ -3,7 +3,7 @@ HOSTNAME=silk.us
 NAMESPACE=silk-terraform-provider
 NAME=silk
 BINARY=terraform-provider-${NAME}
-VERSION=1.2.7
+VERSION=1.2.8
 OS_ARCH=linux_amd64
 
 default: install
