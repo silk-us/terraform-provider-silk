@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/hashicorp/terraform-plugin-sdk/v2 v2.0.0
-	github.com/silk-us/silk-sdp-go-sdk v1.3.0
+	github.com/silk-us/silk-sdp-go-sdk v1.4.0
 )
 
 require (
